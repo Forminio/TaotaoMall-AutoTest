@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.venv/
+venv/
+env/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# 测试产物（自动生成，不入库）
+reports/
+img/
+*.log
+.pytest_cache/
+
+# 系统文件
+.DS_Store
+Thumbs.db

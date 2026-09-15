@@ -1,0 +1,9 @@
+[
+  {"username": "admin", "password": "123456", "captcha": "8888", "expect_msg": "", "success": true},
+  {"username": "user1", "password": "123456", "captcha": "8888", "expect_msg": "", "success": true},
+  {"username": "admin", "password": "123", "captcha": "8888", "expect_msg": "密码长度不能少于6位", "success": false},
+  {"username": "admin", "password": "123456", "captcha": "0000", "expect_msg": "验证码错误", "success": false},
+  {"username": "", "password": "123456", "captcha": "8888", "expect_msg": "请输入用户名", "success": false},
+  {"username": "admin", "password": "", "captcha": "8888", "expect_msg": "请输入密码", "success": false},
+  {"username": "admin", "password": "123456", "captcha": "", "expect_msg": "请输入验证码", "success": false}
+]

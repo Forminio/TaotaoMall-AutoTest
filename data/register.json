@@ -1,0 +1,10 @@
+[
+  {"username": "", "password": "123456", "confirm": "123456", "phone": "13800138000", "expect_msg": "请输入用户名", "agree": true, "success": false},
+  {"username": "newuser", "password": "", "confirm": "", "phone": "", "expect_msg": "请输入密码", "agree": true, "success": false},
+  {"username": "newuser", "password": "123", "confirm": "123", "phone": "13800138000", "expect_msg": "密码长度不能少于6位", "agree": true, "success": false},
+  {"username": "newuser", "password": "123456", "confirm": "654321", "phone": "13800138000", "expect_msg": "两次输入的密码不一致", "agree": true, "success": false},
+  {"username": "newuser", "password": "123456", "confirm": "123456", "phone": "", "expect_msg": "请输入手机号码", "agree": true, "success": false},
+  {"username": "newuser", "password": "123456", "confirm": "123456", "phone": "12345", "expect_msg": "请输入正确的手机号码", "agree": true, "success": false},
+  {"username": "newuser", "password": "123456", "confirm": "123456", "phone": "13800138000", "expect_msg": "请先阅读并同意用户协议", "agree": false, "success": false},
+  {"username": "newuser7", "password": "123456", "confirm": "123456", "phone": "13800138000", "expect_msg": "", "agree": true, "success": true}
+]

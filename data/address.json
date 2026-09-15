@@ -1,0 +1,8 @@
+[
+  {"receiver": "张三", "phone": "13800138000", "address": "北京市朝阳区建国路88号", "success": true},
+  {"receiver": "李四", "phone": "13900139000", "address": "上海市浦东新区陆家嘴", "success": true},
+  {"receiver": "王五", "phone": "13700137000", "address": "广州市天河区珠江新城", "success": true},
+  {"receiver": "", "phone": "13800138000", "address": "北京市朝阳区", "success": false},
+  {"receiver": "张三", "phone": "123", "address": "北京市朝阳区", "success": false},
+  {"receiver": "张三", "phone": "13800138000", "address": "短", "success": false}
+]

@@ -1,0 +1,8 @@
+[
+  {"index": 0, "coupon": "a"},
+  {"index": 0, "coupon": "b"},
+  {"index": 0, "coupon": "c"},
+  {"index": 2, "coupon": "a"},
+  {"index": 1, "coupon": "c"},
+  {"index": 23, "coupon": "c"}
+]
