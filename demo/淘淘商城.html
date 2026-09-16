@@ -202,6 +202,59 @@
         .detail-info { flex: 1; }
         .detail-title { font-size: 20px; color: #333; margin-bottom: 20px;
                         line-height: 1.5; }
+        /* ---- 详情页长图 + 分区（商品详情/使用方法/免责声明/猜你喜欢） ---- */
+        .detail-long { margin-top: 30px; }
+        .detail-long img {
+            width: 100%; max-height: 2400px; object-fit: cover;
+            border-radius: 8px; display: block; background: #fafafa;
+        }
+        .detail-long .long-sec { position: relative; margin-bottom: 14px; overflow: hidden; border-radius: 8px; }
+        .detail-long .long-sec img { margin-bottom: 0; }
+        .detail-long .long-slogan {
+            position: absolute; left: 18px; bottom: 14px;
+            color: #fff; font-size: 26px; font-weight: 700; letter-spacing: 2px;
+            text-shadow: 0 2px 10px rgba(0,0,0,.6); background: rgba(0,0,0,.18);
+            padding: 6px 16px; border-radius: 6px;
+        }
+        .detail-tabs {
+            display: flex; gap: 6px; margin-top: 30px;
+            border-bottom: 2px solid #ff5000; position: relative;
+        }
+        .detail-tabs .tab {
+            padding: 10px 22px; cursor: pointer; color: #666;
+            font-size: 15px; border-radius: 6px 6px 0 0;
+            border: 1px solid transparent; border-bottom: none;
+            background: #fafafa; user-select: none;
+        }
+        .detail-tabs .tab:hover { color: #ff5000; }
+        .detail-tabs .tab.active {
+            color: #ff5000; font-weight: 700;
+            background: #fff; border-color: #ff5000;
+            position: relative; top: 2px; border-bottom: 2px solid #fff;
+        }
+        .detail-panel {
+            background: #fff; border: 1px solid #f0f0f0;
+            border-top: none; border-radius: 0 0 8px 8px;
+            padding: 22px 26px; line-height: 1.9; color: #555; font-size: 14px;
+        }
+        .detail-panel h4 { color: #333; margin: 0 0 8px; font-size: 15px; }
+        .detail-panel ul { margin: 6px 0 12px; padding-left: 20px; }
+        .detail-panel li { margin-bottom: 4px; }
+        .reco-grid {
+            display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px;
+        }
+        .reco-card {
+            border: 1px solid #f0f0f0; border-radius: 8px; overflow: hidden;
+            cursor: pointer; background: #fff; transition: all 0.25s;
+        }
+        .reco-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(255,80,0,0.13); border-color: #ff5000;
+        }
+        .reco-card img { width: 100%; height: 130px; object-fit: cover; display: block; background: #fafafa; }
+        .reco-card .rc-name { padding: 8px 10px 2px; font-size: 13px; color: #333; height: 40px; overflow: hidden; }
+        .reco-card .rc-price { padding: 2px 10px 12px; color: #ff5000; font-size: 16px; font-weight: 700; }
+        .reco-head { font-size: 16px; color: #333; margin-bottom: 14px; padding-left: 10px; border-left: 4px solid #ff5000; }
         .detail-price-box {
             background: #fef7f5; padding: 20px; border-radius: 6px;
             margin-bottom: 20px;
@@ -863,6 +916,16 @@
                         </div>
                     </div>
                 </div>
+
+                <div class="detail-long" id="detailLong"></div>
+
+                <div class="detail-tabs" id="detailTabs">
+                    <span class="tab active" data-tab="desc">商品详情</span>
+                    <span class="tab" data-tab="usage">使用方法</span>
+                    <span class="tab" data-tab="disclaimer">免责声明</span>
+                    <span class="tab" data-tab="recommend">猜你喜欢</span>
+                </div>
+                <div class="detail-panel" id="detailPanel"></div>
             </div>
         </div>
 
@@ -1124,13 +1187,72 @@
     var msgTab = "system";
 
     // ========== 分页状态 ==========
-    var pageSize = 12;
+    var pageSize = 15;   // 与商品网格每行 5 个对齐（5×3），保证每页末行铺满
     var currentPage = 1;
     var currentList = [];   // 当前要展示的完整列表（用于分页）
 
-    // ========== 图片辅助 ==========
-    function pimg(id, w, h) { return 'https://picsum.photos/seed/tt' + id + '/' + w + '/' + h; }
-    function simg(id, w, h) { return 'https://picsum.photos/seed/shop' + id + '/' + w + '/' + h; }
+    // ========== 图片辅助（网络高清图，按商品分类匹配；广告长图由多张横图拼接） ==========
+    var catImgKw = {
+        phone: "smartphone", computer: "laptop", audio: "headphone",
+        wearable: "smartwatch", home: "kitchen", clothes: "fashion",
+        food: "food", beauty: "cosmetics", sports: "fitness", book: "book",
+        general: "shopping"
+    };
+    var imgLock = {};   // 每件商品在所属分类内的序号（1~45），保证同类不同货图不同且锁值可靠
+    function ensureImgLock() {
+        if (Object.keys(imgLock).length) return;
+        var cnt = {};
+        for (var i = 0; i < products.length; i++) {
+            var c = products[i].cat;
+            cnt[c] = (cnt[c] || 0) + 1;
+            imgLock[products[i].id] = cnt[c];
+        }
+    }
+    function catKw(cat) { return catImgKw[cat] || "shopping"; }
+    function pimg(id, w, h) {
+        ensureImgLock();
+        var kw = "shopping";
+        for (var i = 0; i < products.length; i++) {
+            if (products[i].id === id) { kw = catKw(products[i].cat); break; }
+        }
+        return 'https://loremflickr.com/' + w + '/' + h + '/' + kw + '?lock=' + (imgLock[id] || id);
+    }
+    function simg(id, w, h) {
+        var kw = "shopping";
+        for (var i = 0; i < shops.length; i++) {
+            if (shops[i].id === id) { kw = catKw(shops[i].cat); break; }
+        }
+        return 'https://loremflickr.com/' + w + '/' + h + '/' + kw + '?lock=' + (id + 300);
+    }
+    // 广告长图：把多张同分类横图竖向拼接，每张配一句广告语，仿淘宝商品详情长图
+    var catSlogan = {
+        phone: ["旗舰影像 · 夜拍更强", "5G 疾速 · 快人一步", "正品行货 · 全国联保"],
+        computer: ["性能强劲 · 散热出众", "轻薄高刷 · 办公利器", "大厂品质 · 放心购"],
+        audio: ["沉浸声场 · 降噪在线", "超长续航 · 轻巧佩戴", "发烧音质 · 无损聆听"],
+        wearable: ["精准健康监测", "长续航 · 抬手即看", "运动数据 · 一目了然"],
+        home: ["节能静音 · 智能联动", "大容量 · 易清洁", "品质家电 · 十年质保"],
+        clothes: ["新款上市 · 面料亲肤", "百搭有型 · 四季可穿", "正品好货 · 七天无理由"],
+        food: ["鲜选好物 · 产地直发", "营养健康 · 口味俱佳", "冷链锁鲜 · 当日送达"],
+        beauty: ["温和配方 · 敏肌可用", "补水保湿 · 焕亮肌肤", "正品个护 · 假一赔十"],
+        sports: ["轻量透气 · 运动自在", "耐磨防滑 · 稳护关节", "专业装备 · 商城直营"],
+        book: ["正版好书 · 天天上新", "精选书单 · 持续更新", "教材教辅 · 一站购齐"],
+        general: ["优选好物 · 限时特惠", "一件也包邮", "品质生活 · 从这里开始"]
+    };
+    function buildDetailLong(p) {
+        ensureImgLock();
+        var kw = catKw(p.cat);
+        var base = imgLock[p.id] || 1;
+        var sgs = catSlogan[p.cat] || ["优选好物", "品质保障", "超值钜惠"];
+        var secLock = function (off) { return ((base + off - 1) % 45) + 1; };
+        var h = "";
+        for (var i = 0; i < 3; i++) {
+            h += '<div class="long-sec">' +
+                 '<img src="https://loremflickr.com/1000/650/' + kw + '?lock=' + secLock(i * 15) +
+                 '" alt="' + p.name + ' 广告图' + (i + 1) + '" onerror="imgFallback(this)">' +
+                 '<div class="long-slogan">' + sgs[i] + '</div></div>';
+        }
+        return h;
+    }
 
     // ========== 商家数据 ==========
     var shops = [
@@ -1146,49 +1268,459 @@
         { id: 10, name: "淘淘生活优选超市", main: "食品 / 美妆 / 运动 / 图书", cat: "general", rating: 4.5, sales: 3200000, location: "江苏南京", since: "2019", desc: "全品类生活优选，食品生鲜、美妆个护、运动户外、图书文娱。" }
     ];
 
-    // ========== 商品数据（40 个） ==========
-    var products = [
-        { id: 1, name: "Apple iPhone 15 Pro 256G 原色钛金属 5G手机", price: 8999, cat: "phone", sales: 12500, stock: 99, shopId: 1 },
-        { id: 2, name: "小米14 Ultra 16G+512G 黑色 徕卡光学镜头", price: 6499, cat: "phone", sales: 8900, stock: 88, shopId: 3 },
-        { id: 3, name: "华为 Mate 60 Pro 12G+512G 雅川青 卫星通信", price: 6999, cat: "phone", sales: 15600, stock: 66, shopId: 2 },
-        { id: 4, name: "OPPO Find X7 Ultra 16G+512G 大漠银月", price: 5999, cat: "phone", sales: 4500, stock: 77, shopId: 4 },
-        { id: 5, name: "联想拯救者 Y9000P 2024 RTX4060 游戏本", price: 9299, cat: "computer", sales: 3200, stock: 33, shopId: 5 },
-        { id: 6, name: "MacBook Air M3 13英寸 8G+256G 午夜色", price: 7999, cat: "computer", sales: 6700, stock: 44, shopId: 1 },
-        { id: 7, name: "华为 MateBook X Pro 14.2英寸 酷睿Ultra9", price: 11199, cat: "computer", sales: 1800, stock: 22, shopId: 2 },
-        { id: 8, name: "戴尔 XPS 15 设计师笔记本 RTX4070", price: 15999, cat: "computer", sales: 900, stock: 15, shopId: 7 },
-        { id: 9, name: "索尼 WH-1000XM5 头戴式降噪耳机", price: 2399, cat: "audio", sales: 12000, stock: 88, shopId: 6 },
-        { id: 10, name: "Apple AirPods Pro 2 USB-C 主动降噪", price: 1899, cat: "audio", sales: 22000, stock: 120, shopId: 1 },
-        { id: 11, name: "Bose QC Ultra 消噪耳机 空间音频", price: 2999, cat: "audio", sales: 3400, stock: 66, shopId: 8 },
-        { id: 12, name: "漫步者 Lolli Pro3 真无线降噪耳机", price: 399, cat: "audio", sales: 45000, stock: 500, shopId: 8 },
-        { id: 13, name: "苹果 iPad Pro 11英寸 M4芯片 256G", price: 8999, cat: "wearable", sales: 5600, stock: 44, shopId: 1 },
-        { id: 14, name: "Apple Watch Ultra 2 49mm 钛金属", price: 6499, cat: "wearable", sales: 4200, stock: 55, shopId: 1 },
-        { id: 15, name: "华为 WATCH GT 4 46mm 曜石黑", price: 1488, cat: "wearable", sales: 9800, stock: 99, shopId: 2 },
-        { id: 16, name: "小米手环 8 Pro 智能运动手环", price: 399, cat: "wearable", sales: 35000, stock: 200, shopId: 3 },
-        { id: 17, name: "小米电视 S Pro 85英寸 Mini LED", price: 7999, cat: "home", sales: 2300, stock: 28, shopId: 3 },
-        { id: 18, name: "索尼 KD-75X85K 75英寸 4K电视", price: 8999, cat: "home", sales: 1500, stock: 20, shopId: 6 },
-        { id: 19, name: "美的 1.5匹 新一级能效 变频空调", price: 2999, cat: "home", sales: 8600, stock: 120, shopId: 10 },
-        { id: 20, name: "海尔 501升 十字对开门冰箱", price: 4599, cat: "home", sales: 3200, stock: 45, shopId: 10 },
-        { id: 21, name: "Nike Air Jordan 1 高帮篮球鞋", price: 1299, cat: "clothes", sales: 8900, stock: 66, shopId: 9 },
-        { id: 22, name: "Adidas Ultraboost 22 缓震跑鞋", price: 999, cat: "clothes", sales: 6700, stock: 88, shopId: 9 },
-        { id: 23, name: "Coach 蔻驰女士单肩包 经典款", price: 2899, cat: "clothes", sales: 3400, stock: 33, shopId: 9 },
-        { id: 24, name: "优衣库 轻薄羽绒服 女款", price: 799, cat: "clothes", sales: 12000, stock: 150, shopId: 9 },
-        { id: 25, name: "三只松鼠 每日坚果 750g礼盒", price: 99, cat: "food", sales: 68000, stock: 800, shopId: 10 },
-        { id: 26, name: "良品铺子 高端零食大礼包", price: 199, cat: "food", sales: 32000, stock: 400, shopId: 10 },
-        { id: 27, name: "农夫山泉 天然饮用水 550ml*24瓶", price: 45, cat: "food", sales: 120000, stock: 2000, shopId: 10 },
-        { id: 28, name: "蒙牛 纯牛奶 250ml*16盒", price: 65, cat: "food", sales: 95000, stock: 1500, shopId: 10 },
-        { id: 29, name: "雅诗兰黛 小棕瓶精华 50ml", price: 1080, cat: "beauty", sales: 12000, stock: 200, shopId: 10 },
-        { id: 30, name: "兰蔻 小黑瓶肌底精华 30ml", price: 760, cat: "beauty", sales: 9800, stock: 180, shopId: 10 },
-        { id: 31, name: "欧莱雅 复颜玻尿酸面霜", price: 299, cat: "beauty", sales: 24000, stock: 600, shopId: 10 },
-        { id: 32, name: "舒肤佳 沐浴露 浴后留香", price: 59, cat: "beauty", sales: 88000, stock: 1200, shopId: 10 },
-        { id: 33, name: "迪卡侬 露营帐篷 3-4人全自动", price: 599, cat: "sports", sales: 15000, stock: 300, shopId: 10 },
-        { id: 34, name: "尤尼克斯 羽毛球拍 全碳素", price: 899, cat: "sports", sales: 7800, stock: 180, shopId: 10 },
-        { id: 35, name: "李宁 超轻跑步鞋 男子专业跑鞋", price: 499, cat: "sports", sales: 21000, stock: 400, shopId: 10 },
-        { id: 36, name: "斯伯丁 7号篮球 耐磨室内外通用", price: 199, cat: "sports", sales: 13000, stock: 350, shopId: 10 },
-        { id: 37, name: "《Java编程思想》第4版 机械工业出版社", price: 108, cat: "book", sales: 12000, stock: 500, shopId: 10 },
-        { id: 38, name: "《三体》全集 刘慈欣科幻小说", price: 88, cat: "book", sales: 45000, stock: 900, shopId: 10 },
-        { id: 39, name: "《百年孤独》精装版 马尔克斯", price: 59, cat: "book", sales: 28000, stock: 600, shopId: 10 },
-        { id: 40, name: "《新华字典》第12版 商务印书馆", price: 49, cat: "book", sales: 88000, stock: 2000, shopId: 10 }
-    ];
+    // ========== 商品数据（450 个，每类 45 个，各 3 页） ==========
+var products = [
+    { id: 1, name: "Apple iPhone 15 Pro 256G 原色钛金属 5G手机", price: 8999, cat: "phone", sales: 12500, stock: 99, shopId: 1 },
+    { id: 2, name: "小米14 Ultra 16G+512G 黑色 徕卡光学镜头", price: 6499, cat: "phone", sales: 8900, stock: 88, shopId: 3 },
+    { id: 3, name: "华为 Mate 60 Pro 12G+512G 雅川青 卫星通信", price: 6999, cat: "phone", sales: 15600, stock: 66, shopId: 2 },
+    { id: 4, name: "OPPO Find X7 Ultra 16G+512G 大漠银月", price: 5999, cat: "phone", sales: 4500, stock: 77, shopId: 4 },
+    { id: 5, name: "联想拯救者 Y9000P 2024 RTX4060 游戏本", price: 9299, cat: "computer", sales: 3200, stock: 33, shopId: 5 },
+    { id: 6, name: "MacBook Air M3 13英寸 8G+256G 午夜色", price: 7999, cat: "computer", sales: 6700, stock: 44, shopId: 1 },
+    { id: 7, name: "华为 MateBook X Pro 14.2英寸 酷睿Ultra9", price: 11199, cat: "computer", sales: 1800, stock: 22, shopId: 2 },
+    { id: 8, name: "戴尔 XPS 15 设计师笔记本 RTX4070", price: 15999, cat: "computer", sales: 900, stock: 15, shopId: 7 },
+    { id: 9, name: "索尼 WH-1000XM5 头戴式降噪耳机", price: 2399, cat: "audio", sales: 12000, stock: 88, shopId: 6 },
+    { id: 10, name: "Apple AirPods Pro 2 USB-C 主动降噪", price: 1899, cat: "audio", sales: 22000, stock: 120, shopId: 1 },
+    { id: 11, name: "Bose QC Ultra 消噪耳机 空间音频", price: 2999, cat: "audio", sales: 3400, stock: 66, shopId: 8 },
+    { id: 12, name: "漫步者 Lolli Pro3 真无线降噪耳机", price: 399, cat: "audio", sales: 45000, stock: 500, shopId: 8 },
+    { id: 13, name: "苹果 iPad Pro 11英寸 M4芯片 256G", price: 8999, cat: "wearable", sales: 5600, stock: 44, shopId: 1 },
+    { id: 14, name: "Apple Watch Ultra 2 49mm 钛金属", price: 6499, cat: "wearable", sales: 4200, stock: 55, shopId: 1 },
+    { id: 15, name: "华为 WATCH GT 4 46mm 曜石黑", price: 1488, cat: "wearable", sales: 9800, stock: 99, shopId: 2 },
+    { id: 16, name: "小米手环 8 Pro 智能运动手环", price: 399, cat: "wearable", sales: 35000, stock: 200, shopId: 3 },
+    { id: 17, name: "小米电视 S Pro 85英寸 Mini LED", price: 7999, cat: "home", sales: 2300, stock: 28, shopId: 3 },
+    { id: 18, name: "索尼 KD-75X85K 75英寸 4K电视", price: 8999, cat: "home", sales: 1500, stock: 20, shopId: 6 },
+    { id: 19, name: "美的 1.5匹 新一级能效 变频空调", price: 2999, cat: "home", sales: 8600, stock: 120, shopId: 10 },
+    { id: 20, name: "海尔 501升 十字对开门冰箱", price: 4599, cat: "home", sales: 3200, stock: 45, shopId: 10 },
+    { id: 21, name: "Nike Air Jordan 1 高帮篮球鞋", price: 1299, cat: "clothes", sales: 8900, stock: 66, shopId: 9 },
+    { id: 22, name: "Adidas Ultraboost 22 缓震跑鞋", price: 999, cat: "clothes", sales: 6700, stock: 88, shopId: 9 },
+    { id: 23, name: "Coach 蔻驰女士单肩包 经典款", price: 2899, cat: "clothes", sales: 3400, stock: 33, shopId: 9 },
+    { id: 24, name: "优衣库 轻薄羽绒服 女款", price: 799, cat: "clothes", sales: 12000, stock: 150, shopId: 9 },
+    { id: 25, name: "三只松鼠 每日坚果 750g礼盒", price: 99, cat: "food", sales: 68000, stock: 800, shopId: 10 },
+    { id: 26, name: "良品铺子 高端零食大礼包", price: 199, cat: "food", sales: 32000, stock: 400, shopId: 10 },
+    { id: 27, name: "农夫山泉 天然饮用水 550ml*24瓶", price: 45, cat: "food", sales: 120000, stock: 2000, shopId: 10 },
+    { id: 28, name: "蒙牛 纯牛奶 250ml*16盒", price: 65, cat: "food", sales: 95000, stock: 1500, shopId: 10 },
+    { id: 29, name: "雅诗兰黛 小棕瓶精华 50ml", price: 1080, cat: "beauty", sales: 12000, stock: 200, shopId: 10 },
+    { id: 30, name: "兰蔻 小黑瓶肌底精华 30ml", price: 760, cat: "beauty", sales: 9800, stock: 180, shopId: 10 },
+    { id: 31, name: "欧莱雅 复颜玻尿酸面霜", price: 299, cat: "beauty", sales: 24000, stock: 600, shopId: 10 },
+    { id: 32, name: "舒肤佳 沐浴露 浴后留香", price: 59, cat: "beauty", sales: 88000, stock: 1200, shopId: 10 },
+    { id: 33, name: "迪卡侬 露营帐篷 3-4人全自动", price: 599, cat: "sports", sales: 15000, stock: 300, shopId: 10 },
+    { id: 34, name: "尤尼克斯 羽毛球拍 全碳素", price: 899, cat: "sports", sales: 7800, stock: 180, shopId: 10 },
+    { id: 35, name: "李宁 超轻跑步鞋 男子专业跑鞋", price: 499, cat: "sports", sales: 21000, stock: 400, shopId: 10 },
+    { id: 36, name: "斯伯丁 7号篮球 耐磨室内外通用", price: 199, cat: "sports", sales: 13000, stock: 350, shopId: 10 },
+    { id: 37, name: "《Java编程思想》第4版 机械工业出版社", price: 108, cat: "book", sales: 12000, stock: 500, shopId: 10 },
+    { id: 38, name: "《三体》全集 刘慈欣科幻小说", price: 88, cat: "book", sales: 45000, stock: 900, shopId: 10 },
+    { id: 39, name: "《百年孤独》精装版 马尔克斯", price: 59, cat: "book", sales: 28000, stock: 600, shopId: 10 },
+    { id: 40, name: "《新华字典》第12版 商务印书馆", price: 49, cat: "book", sales: 88000, stock: 2000, shopId: 10 },
+    { id: 41, name: "荣耀Magic6 Pro 16G+512G 海湖青", price: 5299, cat: "phone", sales: 7800, stock: 50, shopId: 1 },
+    { id: 42, name: "vivo X100 Pro 蔡司影像 星迹蓝", price: 5499, cat: "phone", sales: 6600, stock: 51, shopId: 2 },
+    { id: 43, name: "三星 Galaxy S24 Ultra 钛灰", price: 9699, cat: "phone", sales: 4100, stock: 52, shopId: 3 },
+    { id: 44, name: "OPPO A2 Pro 12G+256G 轻薄耐用", price: 1799, cat: "phone", sales: 15000, stock: 53, shopId: 4 },
+    { id: 45, name: "一加 Ace3 骁龙8Gen2 150W快充", price: 2599, cat: "phone", sales: 9800, stock: 54, shopId: 1 },
+    { id: 46, name: "realme 真我GT5 Pro 无线充电", price: 3399, cat: "phone", sales: 7200, stock: 55, shopId: 2 },
+    { id: 47, name: "iQOO 12 电竞旗舰 16G+512G", price: 4299, cat: "phone", sales: 8900, stock: 56, shopId: 3 },
+    { id: 48, name: "荣耀X50 抗摔曲面屏 一亿像素", price: 1399, cat: "phone", sales: 26000, stock: 57, shopId: 4 },
+    { id: 49, name: "vivo S18 人像自拍 16G+512G", price: 2799, cat: "phone", sales: 11000, stock: 58, shopId: 1 },
+    { id: 50, name: "三星 Galaxy A55 5G 皓月白", price: 2999, cat: "phone", sales: 5200, stock: 59, shopId: 2 },
+    { id: 51, name: "OPPO Reno11 人像三摄 微醺柚", price: 2999, cat: "phone", sales: 6400, stock: 60, shopId: 3 },
+    { id: 52, name: "一加12 哈苏影像 24G+1T", price: 5299, cat: "phone", sales: 5800, stock: 61, shopId: 4 },
+    { id: 53, name: "realme 真我12 Pro+ 潜望长焦", price: 2199, cat: "phone", sales: 8800, stock: 62, shopId: 1 },
+    { id: 54, name: "iQOO Neo9 性能小钢炮 12G+512G", price: 2999, cat: "phone", sales: 9200, stock: 63, shopId: 2 },
+    { id: 55, name: "荣耀Magic V3 折叠屏 素皮版", price: 8199, cat: "phone", sales: 2600, stock: 64, shopId: 3 },
+    { id: 56, name: "vivo X Fold3 折叠旗舰 蓝白", price: 7999, cat: "phone", sales: 1700, stock: 65, shopId: 4 },
+    { id: 57, name: "三星 Galaxy Z Flip6 掌心折叠", price: 7499, cat: "phone", sales: 2100, stock: 66, shopId: 1 },
+    { id: 58, name: "努比亚 Z60 Ultra 真全面屏", price: 4299, cat: "phone", sales: 3900, stock: 67, shopId: 2 },
+    { id: 59, name: "中兴 星纪30 直屏旗舰 苍穹黑", price: 4199, cat: "phone", sales: 3600, stock: 68, shopId: 3 },
+    { id: 60, name: "一加 Open 折叠屏 至尊版", price: 7999, cat: "phone", sales: 1300, stock: 69, shopId: 4 },
+    { id: 61, name: "OPPO Find N3 折叠屏 典雅黑", price: 9999, cat: "phone", sales: 1100, stock: 70, shopId: 1 },
+    { id: 62, name: "荣耀90 GT 电竞直屏 冰羽蓝", price: 3299, cat: "phone", sales: 7600, stock: 71, shopId: 2 },
+    { id: 63, name: "vivo iQOO Z9 长续航 骁龙7Gen3", price: 1599, cat: "phone", sales: 14000, stock: 72, shopId: 3 },
+    { id: 64, name: "三星 Galaxy Z Fold6 折叠屏", price: 11999, cat: "phone", sales: 1500, stock: 73, shopId: 4 },
+    { id: 65, name: "realme 真我 GT Neo6 电竞版", price: 2499, cat: "phone", sales: 9900, stock: 74, shopId: 1 },
+    { id: 66, name: "荣耀Magic6 Lite 曲面护眼屏", price: 2199, cat: "phone", sales: 8200, stock: 75, shopId: 2 },
+    { id: 67, name: "vivo X100s 天玑9300+ 直屏", price: 3999, cat: "phone", sales: 6000, stock: 76, shopId: 3 },
+    { id: 68, name: "OPPO A1 5G 千元续航王", price: 1099, cat: "phone", sales: 18000, stock: 77, shopId: 4 },
+    { id: 69, name: "一加 Nord CE5 均衡轻薄", price: 1899, cat: "phone", sales: 7100, stock: 78, shopId: 1 },
+    { id: 70, name: "三星 Galaxy A25 5G 清爽蓝", price: 1499, cat: "phone", sales: 8300, stock: 79, shopId: 2 },
+    { id: 71, name: "荣耀Play9 高性能娱乐平板手机", price: 1299, cat: "phone", sales: 9500, stock: 80, shopId: 3 },
+    { id: 72, name: "vivo Y200 大电池 大内存", price: 1399, cat: "phone", sales: 13000, stock: 81, shopId: 4 },
+    { id: 73, name: "iQOO Z9 Turbo 240W快充", price: 2999, cat: "phone", sales: 9700, stock: 82, shopId: 1 },
+    { id: 74, name: "realme 真我 Note 星海绿", price: 1199, cat: "phone", sales: 8000, stock: 83, shopId: 2 },
+    { id: 75, name: "努比亚 星曜30 Pro 灵动镜头", price: 3299, cat: "phone", sales: 3300, stock: 84, shopId: 3 },
+    { id: 76, name: "OPPO K12 Plus 三防耐摔", price: 1599, cat: "phone", sales: 12500, stock: 85, shopId: 4 },
+    { id: 77, name: "三星 Galaxy S23 FE 旗舰平替", price: 4199, cat: "phone", sales: 4600, stock: 86, shopId: 1 },
+    { id: 78, name: "vivo T3 性价比直屏 2000mAh", price: 1499, cat: "phone", sales: 11500, stock: 87, shopId: 2 },
+    { id: 79, name: "荣耀Magic7 年度影像旗舰", price: 4999, cat: "phone", sales: 6800, stock: 88, shopId: 3 },
+    { id: 80, name: "一加 Ace 竞速版 天玑8100", price: 1999, cat: "phone", sales: 8600, stock: 89, shopId: 4 },
+    { id: 81, name: "iQOO Z8 电竞直屏 4nm芯片", price: 1699, cat: "phone", sales: 10500, stock: 90, shopId: 1 },
+    { id: 82, name: "惠普 星Book Pro14 锐龙轻薄本", price: 5799, cat: "computer", sales: 5200, stock: 50, shopId: 5 },
+    { id: 83, name: "联想 小新Pro16 2.8K护眼屏", price: 6499, cat: "computer", sales: 7800, stock: 51, shopId: 7 },
+    { id: 84, name: "华硕 天选5 Pro 游戏本 RTX4060", price: 8299, cat: "computer", sales: 4600, stock: 52, shopId: 1 },
+    { id: 85, name: "机械革命 极光X 2K电竞屏", price: 6999, cat: "computer", sales: 3900, stock: 53, shopId: 2 },
+    { id: 86, name: "宏碁 掠夺者 战斧17 高性能本", price: 10999, cat: "computer", sales: 2100, stock: 54, shopId: 8 },
+    { id: 87, name: "ThinkPad X1 Carbon 商务轻薄", price: 11999, cat: "computer", sales: 1800, stock: 55, shopId: 5 },
+    { id: 88, name: "ROG 幻15 液金散热 创作本", price: 13999, cat: "computer", sales: 1400, stock: 56, shopId: 7 },
+    { id: 89, name: "神舟 战神Z8 酷睿i9+4060", price: 7499, cat: "computer", sales: 3500, stock: 57, shopId: 1 },
+    { id: 90, name: "微星 创造者16 AI Studio", price: 15999, cat: "computer", sales: 900, stock: 58, shopId: 2 },
+    { id: 91, name: "三星 990 Pro 2TB 固态硬盘", price: 1599, cat: "computer", sales: 11000, stock: 59, shopId: 8 },
+    { id: 92, name: "西部数据 4TB 移动硬盘 加密", price: 799, cat: "computer", sales: 8600, stock: 60, shopId: 5 },
+    { id: 93, name: "罗技 MX Master 3S 无线鼠标", price: 799, cat: "computer", sales: 12000, stock: 61, shopId: 7 },
+    { id: 94, name: "樱桃 MX8.2 机械键盘 无线", price: 899, cat: "computer", sales: 7800, stock: 62, shopId: 1 },
+    { id: 95, name: "飞利浦 27英寸 4K 显示器", price: 1999, cat: "computer", sales: 9800, stock: 63, shopId: 2 },
+    { id: 96, name: "戴尔 U2723QE 专业设计显示器", price: 4299, cat: "computer", sales: 2400, stock: 64, shopId: 8 },
+    { id: 97, name: "华硕 灵耀Pro16 创作AI本", price: 8999, cat: "computer", sales: 2900, stock: 65, shopId: 5 },
+    { id: 98, name: "联想 拯救者刃7000K 台式主机", price: 7999, cat: "computer", sales: 4100, stock: 66, shopId: 7 },
+    { id: 99, name: "攀升 商睿一体机 27英寸 大屏", price: 3999, cat: "computer", sales: 3600, stock: 67, shopId: 1 },
+    { id: 100, name: "惠普 战99 移动工作站 顶配", price: 15999, cat: "computer", sales: 800, stock: 68, shopId: 2 },
+    { id: 101, name: "公版 RTX4070 SUPER 显卡", price: 4999, cat: "computer", sales: 3300, stock: 69, shopId: 8 },
+    { id: 102, name: "美光 英睿达 32G DDR5 内存条", price: 899, cat: "computer", sales: 15000, stock: 70, shopId: 5 },
+    { id: 103, name: "金士顿 A400 1TB 固态硬盘", price: 399, cat: "computer", sales: 17000, stock: 71, shopId: 7 },
+    { id: 104, name: "联想 拯救者手柄 Y700 无线", price: 499, cat: "computer", sales: 6600, stock: 72, shopId: 1 },
+    { id: 105, name: "罗技 G502 X 电竞鼠标 有线", price: 399, cat: "computer", sales: 8800, stock: 73, shopId: 2 },
+    { id: 106, name: "HTOC 27英寸 165Hz 电竞显示器", price: 1299, cat: "computer", sales: 7200, stock: 74, shopId: 8 },
+    { id: 107, name: "微软 臻选键鼠套装 蓝牙", price: 899, cat: "computer", sales: 5400, stock: 75, shopId: 5 },
+    { id: 108, name: "戴尔 1600W 电竞电源 金牌", price: 999, cat: "computer", sales: 4800, stock: 76, shopId: 7 },
+    { id: 109, name: "先马 征服者机箱 侧透水冷", price: 599, cat: "computer", sales: 9000, stock: 77, shopId: 1 },
+    { id: 110, name: "华硕 创世M16 高刷屏 游戏本", price: 12999, cat: "computer", sales: 1100, stock: 78, shopId: 2 },
+    { id: 111, name: "联想 拯救者掌机 LEGION GO", price: 4999, cat: "computer", sales: 2700, stock: 79, shopId: 8 },
+    { id: 112, name: "微软 全能触控板 Surface Arc", price: 899, cat: "computer", sales: 3100, stock: 80, shopId: 5 },
+    { id: 113, name: "惠普 星14 学习轻薄本 学生版", price: 3299, cat: "computer", sales: 9200, stock: 81, shopId: 7 },
+    { id: 114, name: "宏碁 暗影骑士 百创造力本", price: 5499, cat: "computer", sales: 3800, stock: 82, shopId: 1 },
+    { id: 115, name: "雷神 银翼G1 电竞本 240Hz屏", price: 7999, cat: "computer", sales: 2900, stock: 83, shopId: 2 },
+    { id: 116, name: "极空间 Z4 Pro NAS 私有云", price: 2499, cat: "computer", sales: 4200, stock: 84, shopId: 8 },
+    { id: 117, name: "绿联 硬盘解析座 双盘位", price: 299, cat: "computer", sales: 9600, stock: 85, shopId: 5 },
+    { id: 118, name: "联想 拯救者 Pro 显卡坞", price: 3999, cat: "computer", sales: 1300, stock: 86, shopId: 7 },
+    { id: 119, name: "镁光 980 PRO 1TB 固态 散热版", price: 549, cat: "computer", sales: 11000, stock: 87, shopId: 1 },
+    { id: 120, name: "戴尔 原装 蓝牙触控笔", price: 199, cat: "computer", sales: 5400, stock: 88, shopId: 2 },
+    { id: 121, name: "小米平板 5 Pro 12.4英寸 娱乐", price: 2299, cat: "computer", sales: 6400, stock: 89, shopId: 8 },
+    { id: 122, name: "iPad 10代 10.9英寸 64G", price: 3499, cat: "computer", sales: 5800, stock: 90, shopId: 5 },
+    { id: 123, name: "JBL 蓝牙音箱 Flip6 便携防水", price: 599, cat: "audio", sales: 12000, stock: 50, shopId: 6 },
+    { id: 124, name: "哈曼卡顿 水晶3 桌面音箱 2.1", price: 1999, cat: "audio", sales: 6800, stock: 51, shopId: 8 },
+    { id: 125, name: "马歇尔 Stanmore III 蓝牙音箱", price: 2699, cat: "audio", sales: 5400, stock: 52, shopId: 1 },
+    { id: 126, name: "山灵 便携播放器 M3 Ultra", price: 2699, cat: "audio", sales: 3500, stock: 53, shopId: 4 },
+    { id: 127, name: "铁三角 ATH-M50x 监听耳机", price: 999, cat: "audio", sales: 8800, stock: 54, shopId: 6 },
+    { id: 128, name: "森海塞尔 HD660S2 头戴式耳机", price: 3999, cat: "audio", sales: 2400, stock: 55, shopId: 8 },
+    { id: 129, name: "B&O Beoplay EX 无线降噪耳机", price: 2599, cat: "audio", sales: 4800, stock: 56, shopId: 1 },
+    { id: 130, name: "LG Tone Free 蓝牙耳机 降噪", price: 899, cat: "audio", sales: 6200, stock: 57, shopId: 4 },
+    { id: 131, name: "飞利浦 骨传导运动耳机", price: 699, cat: "audio", sales: 7800, stock: 58, shopId: 6 },
+    { id: 132, name: "华为智慧屏 65英寸 影院版音箱", price: 499, cat: "audio", sales: 9100, stock: 59, shopId: 8 },
+    { id: 133, name: "三星回音壁 HW-Q600C 杜比全景声", price: 2999, cat: "audio", sales: 3900, stock: 60, shopId: 1 },
+    { id: 134, name: "漫步者 AR800 桌面2.0 木质音箱", price: 299, cat: "audio", sales: 14000, stock: 61, shopId: 4 },
+    { id: 135, name: "HiFiMAN 头戴式平板耳机 黑色", price: 1999, cat: "audio", sales: 2200, stock: 62, shopId: 6 },
+    { id: 136, name: "索尼 PS5 官方游戏耳机", price: 899, cat: "audio", sales: 9700, stock: 63, shopId: 8 },
+    { id: 137, name: "罗技 游戏音箱 杜比 7.1声道", price: 599, cat: "audio", sales: 6800, stock: 64, shopId: 1 },
+    { id: 138, name: "红米蓝牙耳机 真无线 通话降噪", price: 199, cat: "audio", sales: 22000, stock: 65, shopId: 4 },
+    { id: 139, name: "Bose SoundLink 便携音箱 蓝色", price: 899, cat: "audio", sales: 7100, stock: 66, shopId: 6 },
+    { id: 140, name: "JBL Go 4 超mini便携音箱", price: 299, cat: "audio", sales: 16000, stock: 67, shopId: 8 },
+    { id: 141, name: "声阔 Space Q45 头戴降噪", price: 1099, cat: "audio", sales: 5900, stock: 68, shopId: 1 },
+    { id: 142, name: "漫步者 Zero Buds 半入耳式", price: 159, cat: "audio", sales: 24000, stock: 69, shopId: 4 },
+    { id: 143, name: "韶音 OpenFit 不入耳运动耳机", price: 1299, cat: "audio", sales: 8200, stock: 70, shopId: 6 },
+    { id: 144, name: "NANK 南卡 N2 挂耳式音乐耳机", price: 199, cat: "audio", sales: 13000, stock: 71, shopId: 8 },
+    { id: 145, name: "Sony 创新力 运动骨传导耳机", price: 699, cat: "audio", sales: 6400, stock: 72, shopId: 1 },
+    { id: 146, name: "哈曼 多声道家庭影院套装", price: 8999, cat: "audio", sales: 1200, stock: 73, shopId: 4 },
+    { id: 147, name: "Marshall Minor IV 入耳耳机", price: 599, cat: "audio", sales: 5300, stock: 74, shopId: 6 },
+    { id: 148, name: "BLOLING 头戴式电竞耳机 7.1", price: 249, cat: "audio", sales: 11000, stock: 75, shopId: 8 },
+    { id: 149, name: "JBL 尊宝 S801 落地音箱 一对", price: 1899, cat: "audio", sales: 2100, stock: 76, shopId: 1 },
+    { id: 150, name: "飞利浦 家庭K歌套装 电容麦", price: 1099, cat: "audio", sales: 3800, stock: 77, shopId: 4 },
+    { id: 151, name: "索尼 NW-A305 无损音乐播放器", price: 1499, cat: "audio", sales: 5200, stock: 78, shopId: 6 },
+    { id: 152, name: "铁三角 黑胶唱机 复古 33转", price: 1299, cat: "audio", sales: 2600, stock: 79, shopId: 8 },
+    { id: 153, name: "哈曼卡顿 音乐琥珀 ONYX 便携", price: 999, cat: "audio", sales: 4100, stock: 80, shopId: 1 },
+    { id: 154, name: "Bose QC45 头戴降噪 石墨黑", price: 1999, cat: "audio", sales: 7300, stock: 81, shopId: 4 },
+    { id: 155, name: "森海塞尔 真无线4代 降噪", price: 1799, cat: "audio", sales: 6100, stock: 82, shopId: 6 },
+    { id: 156, name: "漫步者 电竞游戏耳机 带麦", price: 199, cat: "audio", sales: 15000, stock: 83, shopId: 8 },
+    { id: 157, name: "Lenovo 会议降噪耳机 商务", price: 299, cat: "audio", sales: 8200, stock: 84, shopId: 1 },
+    { id: 158, name: "HomePod mini 智能音箱 白色", price: 749, cat: "audio", sales: 4700, stock: 85, shopId: 4 },
+    { id: 159, name: "YAMAHA 回音壁 5.1 影院", price: 4999, cat: "audio", sales: 1600, stock: 86, shopId: 6 },
+    { id: 160, name: "JBL 车载重低音炮 12英寸", price: 799, cat: "audio", sales: 3300, stock: 87, shopId: 8 },
+    { id: 161, name: "飞利浦 桌面麦克风 直播USB", price: 399, cat: "audio", sales: 5900, stock: 88, shopId: 1 },
+    { id: 162, name: "韶音 骨传导 旗舰 不入耳", price: 1099, cat: "audio", sales: 5000, stock: 89, shopId: 4 },
+    { id: 163, name: "小米电视音箱 5.1 虚拟全景声", price: 599, cat: "audio", sales: 7000, stock: 90, shopId: 6 },
+    { id: 164, name: "华为手环 9 蓝牙通话 测血压", price: 899, cat: "wearable", sales: 16000, stock: 50, shopId: 1 },
+    { id: 165, name: "苹果手表 41mm 双拼配色", price: 2999, cat: "wearable", sales: 5200, stock: 51, shopId: 2 },
+    { id: 166, name: "荣耀手环 9 NFC 血氧监测", price: 199, cat: "wearable", sales: 18000, stock: 52, shopId: 3 },
+    { id: 167, name: "OPPO Watch 4 Pro 智能手表", price: 2199, cat: "wearable", sales: 4800, stock: 53, shopId: 1 },
+    { id: 168, name: "vivo 智能手表 独立通讯 足球", price: 1299, cat: "wearable", sales: 6400, stock: 54, shopId: 2 },
+    { id: 169, name: "三星 Galaxy Watch6 蓝牙版", price: 1899, cat: "wearable", sales: 5100, stock: 55, shopId: 3 },
+    { id: 170, name: "佳明 本能 太阳能 户外腕表", price: 2980, cat: "wearable", sales: 3400, stock: 56, shopId: 1 },
+    { id: 171, name: "颂拓 运动手表 越野 轻量", price: 3999, cat: "wearable", sales: 2100, stock: 57, shopId: 2 },
+    { id: 172, name: "小米体脂秤 3 高精度 蓝牙", price: 599, cat: "wearable", sales: 19000, stock: 58, shopId: 3 },
+    { id: 173, name: "任天堂 健身环 体感 家用", price: 449, cat: "wearable", sales: 7000, stock: 59, shopId: 1 },
+    { id: 174, name: "Keep 智能跳绳 计数 长续航", price: 159, cat: "wearable", sales: 15000, stock: 60, shopId: 2 },
+    { id: 175, name: "云麦 智能动感单车 划船机", price: 1999, cat: "wearable", sales: 3800, stock: 61, shopId: 3 },
+    { id: 176, name: "小米心率手环 睡眠监测", price: 169, cat: "wearable", sales: 21000, stock: 62, shopId: 1 },
+    { id: 177, name: "华为 WATCH Fit 3 方形表盘", price: 699, cat: "wearable", sales: 11000, stock: 63, shopId: 2 },
+    { id: 178, name: "Garmin Venu 3 健康旗舰", price: 3999, cat: "wearable", sales: 1300, stock: 64, shopId: 3 },
+    { id: 179, name: "Amazfit 跃我 Cheetah Pro", price: 2499, cat: "wearable", sales: 2400, stock: 65, shopId: 1 },
+    { id: 180, name: "OPPO 手环 悦动款 NFC", price: 699, cat: "wearable", sales: 9000, stock: 66, shopId: 2 },
+    { id: 181, name: "戴森 智能手环 环境检测", price: 1599, cat: "wearable", sales: 2800, stock: 67, shopId: 3 },
+    { id: 182, name: "飞利浦 电动牙刷 美齿声波", price: 399, cat: "wearable", sales: 16000, stock: 68, shopId: 1 },
+    { id: 183, name: "洁碧 冲牙器 家用 电动水冲", price: 899, cat: "wearable", sales: 7200, stock: 69, shopId: 2 },
+    { id: 184, name: "Ro水牙线 便携 唯美充电款", price: 299, cat: "wearable", sales: 11000, stock: 70, shopId: 3 },
+    { id: 185, name: "小米 智能秤 体脂秤 香草", price: 199, cat: "wearable", sales: 14000, stock: 71, shopId: 1 },
+    { id: 186, name: "华为 血压手表 高血糖风险评估", price: 2999, cat: "wearable", sales: 3200, stock: 72, shopId: 2 },
+    { id: 187, name: "苹果 Watch SE 44mm 运动款", price: 2199, cat: "wearable", sales: 4600, stock: 73, shopId: 3 },
+    { id: 188, name: "三星 Galaxy Fit3 手环 腕带", price: 199, cat: "wearable", sales: 9800, stock: 74, shopId: 1 },
+    { id: 189, name: "联想 智能手环 运动睡眠 佩戴", price: 129, cat: "wearable", sales: 12000, stock: 75, shopId: 2 },
+    { id: 190, name: "TWS 智能戒指 睡眠血氧监测", price: 899, cat: "wearable", sales: 4100, stock: 76, shopId: 3 },
+    { id: 191, name: "乐高 体感智能积木 Kids", price: 499, cat: "wearable", sales: 3000, stock: 77, shopId: 1 },
+    { id: 192, name: "乐跑 智能滑板 电动 出行", price: 1999, cat: "wearable", sales: 2600, stock: 78, shopId: 2 },
+    { id: 193, name: "小牛 电动滑板车 轻便折叠", price: 2499, cat: "wearable", sales: 3800, stock: 79, shopId: 3 },
+    { id: 194, name: "九号 平衡车 X6 智能体感", price: 1899, cat: "wearable", sales: 2900, stock: 80, shopId: 1 },
+    { id: 195, name: "佳明 Forerunner 265 运动", price: 3499, cat: "wearable", sales: 2200, stock: 81, shopId: 2 },
+    { id: 196, name: "颂拓 Vertical 钛合金 户外", price: 6999, cat: "wearable", sales: 900, stock: 82, shopId: 3 },
+    { id: 197, name: "Garmin 远征 45 潜水腕表", price: 8999, cat: "wearable", sales: 600, stock: 83, shopId: 1 },
+    { id: 198, name: "欧姆龙 电子血压计 家用", price: 299, cat: "wearable", sales: 13000, stock: 84, shopId: 2 },
+    { id: 199, name: "鱼跃 血糖仪 家用 低痛感", price: 199, cat: "wearable", sales: 6800, stock: 85, shopId: 3 },
+    { id: 200, name: "华为 WATCH 4 Pro 太空版", price: 2999, cat: "wearable", sales: 3600, stock: 86, shopId: 1 },
+    { id: 201, name: "OPPO Watch 5 Pro 蓝宝石", price: 2999, cat: "wearable", sales: 2300, stock: 87, shopId: 2 },
+    { id: 202, name: "vivo 手表 双擎 独立续航", price: 2999, cat: "wearable", sales: 1700, stock: 88, shopId: 3 },
+    { id: 203, name: "Keep Smart 跑步机 折叠", price: 2999, cat: "wearable", sales: 4200, stock: 89, shopId: 1 },
+    { id: 204, name: "格力 智能手环空调遥控", price: 599, cat: "wearable", sales: 5600, stock: 90, shopId: 2 },
+    { id: 205, name: "格力 云锦三代 1匹 变频空调", price: 2699, cat: "home", sales: 6900, stock: 50, shopId: 3 },
+    { id: 206, name: "美的 无风感空调柜机 3匹", price: 6299, cat: "home", sales: 1800, stock: 51, shopId: 6 },
+    { id: 207, name: "海尔 变频滚筒洗衣机 10kg", price: 2599, cat: "home", sales: 9800, stock: 52, shopId: 10 },
+    { id: 208, name: "小天鹅 洗烘一体机 12kg", price: 3599, cat: "home", sales: 4200, stock: 53, shopId: 2 },
+    { id: 209, name: "老板 侧吸油烟机 大风量", price: 2499, cat: "home", sales: 5100, stock: 54, shopId: 3 },
+    { id: 210, name: "方太 嵌入式燃气灶 猛火", price: 1999, cat: "home", sales: 5400, stock: 55, shopId: 6 },
+    { id: 211, name: "米家 扫地机器人 全能基站", price: 2799, cat: "home", sales: 8200, stock: 56, shopId: 10 },
+    { id: 212, name: "石头 吸尘器 无线手持 大吸力", price: 1499, cat: "home", sales: 8800, stock: 57, shopId: 2 },
+    { id: 213, name: "戴森 V15 无线吸尘器 顶配", price: 4999, cat: "home", sales: 6200, stock: 58, shopId: 3 },
+    { id: 214, name: "科沃斯 擦窗机器人 豆豆龙", price: 2199, cat: "home", sales: 3400, stock: 59, shopId: 6 },
+    { id: 215, name: "JBL 空气净化器 除甲醛 家用", price: 1999, cat: "home", sales: 4100, stock: 60, shopId: 10 },
+    { id: 216, name: "飞利浦 净水器 超滤直饮", price: 1599, cat: "home", sales: 4600, stock: 61, shopId: 2 },
+    { id: 217, name: "史密斯 燃气热水器 16L 恒温", price: 2999, cat: "home", sales: 3800, stock: 62, shopId: 3 },
+    { id: 218, name: "美的 电热水器 60L 速热", price: 1599, cat: "home", sales: 7200, stock: 63, shopId: 6 },
+    { id: 219, name: "九阳 破壁机 多功能 豆浆机", price: 999, cat: "home", sales: 11000, stock: 64, shopId: 10 },
+    { id: 220, name: "苏泊尔 电饭煲 IH 微压", price: 899, cat: "home", sales: 13000, stock: 65, shopId: 2 },
+    { id: 221, name: "美的 空气炸锅 5L 可视", price: 499, cat: "home", sales: 15000, stock: 66, shopId: 3 },
+    { id: 222, name: "海尔 微波炉 变频 平板式", price: 999, cat: "home", sales: 6800, stock: 67, shopId: 6 },
+    { id: 223, name: "戴森 无叶风扇 冷热两用", price: 4999, cat: "home", sales: 5800, stock: 68, shopId: 10 },
+    { id: 224, name: "美的 空调扇 冷风扇 冰晶", price: 599, cat: "home", sales: 17000, stock: 69, shopId: 2 },
+    { id: 225, name: "TCL 加湿器 静音 大容量", price: 199, cat: "home", sales: 19000, stock: 70, shopId: 3 },
+    { id: 226, name: "德尔玛 除螨仪 紫外线 家用", price: 499, cat: "home", sales: 12000, stock: 71, shopId: 6 },
+    { id: 227, name: "摩飞 咖啡机 半自动 意式", price: 1499, cat: "home", sales: 3600, stock: 72, shopId: 10 },
+    { id: 228, name: "德龙 全自动咖啡机 家用", price: 2999, cat: "home", sales: 2900, stock: 73, shopId: 2 },
+    { id: 229, name: "卡萨帝 双开门冰箱 500L", price: 6999, cat: "home", sales: 2400, stock: 74, shopId: 3 },
+    { id: 230, name: "格力 变频扫拖一体机器人", price: 1799, cat: "home", sales: 5400, stock: 75, shopId: 6 },
+    { id: 231, name: "米家 智能门锁 指纹密码", price: 1299, cat: "home", sales: 9800, stock: 76, shopId: 10 },
+    { id: 232, name: "海尔 智能马桶盖 即热式", price: 1999, cat: "home", sales: 6400, stock: 77, shopId: 2 },
+    { id: 233, name: "箭牌 花洒套装 恒温顶喷", price: 899, cat: "home", sales: 12000, stock: 78, shopId: 3 },
+    { id: 234, name: "四季沐歌 太阳能 热水器", price: 8999, cat: "home", sales: 1800, stock: 79, shopId: 6 },
+    { id: 235, name: "AO史密斯 电热水器 80L", price: 3799, cat: "home", sales: 2900, stock: 80, shopId: 10 },
+    { id: 236, name: "方太 消毒柜 嵌入式 紫外", price: 1599, cat: "home", sales: 3300, stock: 81, shopId: 2 },
+    { id: 237, name: "老板 蒸烤一体机 嵌入式", price: 3599, cat: "home", sales: 2600, stock: 82, shopId: 3 },
+    { id: 238, name: "美的 变频冷柜 双温 226L", price: 1899, cat: "home", sales: 4100, stock: 83, shopId: 6 },
+    { id: 239, name: "海尔 波轮洗衣机 12KG 大容量", price: 1999, cat: "home", sales: 7800, stock: 84, shopId: 10 },
+    { id: 240, name: "华帝 集成灶 蒸烤一体 侧吸", price: 6999, cat: "home", sales: 1500, stock: 85, shopId: 2 },
+    { id: 241, name: "新飞 冷风机 移动空调 带冰", price: 1399, cat: "home", sales: 6800, stock: 86, shopId: 3 },
+    { id: 242, name: "飞雕 智能开关 触控 面板", price: 129, cat: "home", sales: 21000, stock: 87, shopId: 6 },
+    { id: 243, name: "公牛 魔方插座 快充 桌面", price: 89, cat: "home", sales: 24000, stock: 88, shopId: 10 },
+    { id: 244, name: "光线照明 护眼台灯 国AA级", price: 299, cat: "home", sales: 13000, stock: 89, shopId: 2 },
+    { id: 245, name: "yeelight 全屋智能灯光 套装", price: 2499, cat: "home", sales: 2100, stock: 90, shopId: 3 },
+    { id: 246, name: "Nike Air Force 1 休闲板鞋 白", price: 749, cat: "clothes", sales: 15000, stock: 50, shopId: 9 },
+    { id: 247, name: "Adidas 三叶草 经典复古 板鞋", price: 699, cat: "clothes", sales: 13000, stock: 51, shopId: 4 },
+    { id: 248, name: "New Balance 530 复古跑鞋", price: 699, cat: "clothes", sales: 11000, stock: 52, shopId: 10 },
+    { id: 249, name: "FILA 斐乐 老爹鞋 厚底", price: 899, cat: "clothes", sales: 9800, stock: 53, shopId: 9 },
+    { id: 250, name: "New Era 经典棒球帽 软顶", price: 299, cat: "clothes", sales: 12000, stock: 54, shopId: 4 },
+    { id: 251, name: "Zara 简约连帽卫衣 女款", price: 299, cat: "clothes", sales: 14000, stock: 55, shopId: 10 },
+    { id: 252, name: "优衣库 摇粒绒开衫 男款", price: 349, cat: "clothes", sales: 16000, stock: 56, shopId: 9 },
+    { id: 253, name: "GUCCI 女士围巾 羊毛 真丝", price: 1599, cat: "clothes", sales: 2400, stock: 57, shopId: 4 },
+    { id: 254, name: "海澜之家 商务休闲西装 男", price: 899, cat: "clothes", sales: 7800, stock: 58, shopId: 10 },
+    { id: 255, name: "鄂尔多斯 羊绒衫 高领 女", price: 1099, cat: "clothes", sales: 5600, stock: 59, shopId: 9 },
+    { id: 256, name: "波司登 羽绒服 中长款 防寒", price: 1299, cat: "clothes", sales: 9800, stock: 60, shopId: 4 },
+    { id: 257, name: "太平鸟 双面呢大衣 立领", price: 1199, cat: "clothes", sales: 6400, stock: 61, shopId: 10 },
+    { id: 258, name: "Lee 经典直筒牛仔裤 男", price: 499, cat: "clothes", sales: 14000, stock: 62, shopId: 9 },
+    { id: 259, name: "ONLY 显瘦休闲裤 九分", price: 259, cat: "clothes", sales: 13000, stock: 63, shopId: 4 },
+    { id: 260, name: "三叶草 秋冬款 运动休闲夹克", price: 799, cat: "clothes", sales: 8600, stock: 64, shopId: 10 },
+    { id: 261, name: "始祖鸟 冲锋衣 硬壳 防水", price: 2999, cat: "clothes", sales: 3300, stock: 65, shopId: 9 },
+    { id: 262, name: "哥伦比亚 三合一冲锋衣 户外", price: 899, cat: "clothes", sales: 7200, stock: 66, shopId: 4 },
+    { id: 263, name: "探路者 抓绒衣 保暖 男士", price: 399, cat: "clothes", sales: 15000, stock: 67, shopId: 10 },
+    { id: 264, name: "骆驼 户外登山鞋 防滑", price: 499, cat: "clothes", sales: 16000, stock: 68, shopId: 9 },
+    { id: 265, name: "NIKE 紧身训练裤 瑜伽裤", price: 399, cat: "clothes", sales: 17000, stock: 69, shopId: 4 },
+    { id: 266, name: "Lululemon 瑜伽裤 版型宽松", price: 899, cat: "clothes", sales: 8800, stock: 70, shopId: 10 },
+    { id: 267, name: "兰姿 女士双肩包 轻便", price: 699, cat: "clothes", sales: 6400, stock: 71, shopId: 9 },
+    { id: 268, name: "耐克 运动双肩包 大容量", price: 399, cat: "clothes", sales: 11000, stock: 72, shopId: 4 },
+    { id: 269, name: "新秀丽 行李箱 20寸 万向轮", price: 899, cat: "clothes", sales: 12000, stock: 73, shopId: 10 },
+    { id: 270, name: "BALLY 男士皮带 语句经典", price: 899, cat: "clothes", sales: 3300, stock: 74, shopId: 9 },
+    { id: 271, name: "TUMI 商务公文包 牛皮", price: 2299, cat: "clothes", sales: 2800, stock: 75, shopId: 4 },
+    { id: 272, name: "浪琴 女士手表 优雅系列", price: 5999, cat: "clothes", sales: 1200, stock: 76, shopId: 10 },
+    { id: 273, name: "卡地亚 蓝气球 女表 石英", price: 18999, cat: "clothes", sales: 400, stock: 77, shopId: 9 },
+    { id: 274, name: "华为 智选儿童书包 护脊", price: 399, cat: "clothes", sales: 9800, stock: 78, shopId: 4 },
+    { id: 275, name: "迪士尼 儿童羽绒服 连帽", price: 349, cat: "clothes", sales: 7200, stock: 79, shopId: 10 },
+    { id: 276, name: "adidas kids 儿童运动鞋", price: 399, cat: "clothes", sales: 11000, stock: 80, shopId: 9 },
+    { id: 277, name: "巴拉巴拉 童装 针织套装", price: 299, cat: "clothes", sales: 13000, stock: 81, shopId: 4 },
+    { id: 278, name: "安踏 亲子运动套装 男女", price: 599, cat: "clothes", sales: 8900, stock: 82, shopId: 10 },
+    { id: 279, name: "斯凯奇 熊猫鞋 休闲运动", price: 499, cat: "clothes", sales: 15000, stock: 83, shopId: 9 },
+    { id: 280, name: "回力 经典帆布鞋 国潮", price: 199, cat: "clothes", sales: 22000, stock: 84, shopId: 4 },
+    { id: 281, name: "飞跃 A375 帆布鞋 复古", price: 169, cat: "clothes", sales: 18000, stock: 85, shopId: 10 },
+    { id: 282, name: "华为 轻薄保暖内衣 男", price: 299, cat: "clothes", sales: 12000, stock: 86, shopId: 9 },
+    { id: 283, name: "雪中飞 情侣羽绒服 轻薄", price: 599, cat: "clothes", sales: 14000, stock: 87, shopId: 4 },
+    { id: 284, name: "南极人 保暖居家服 套装", price: 199, cat: "clothes", sales: 20000, stock: 88, shopId: 10 },
+    { id: 285, name: "浪莎 男士袜子 十双装", price: 69, cat: "clothes", sales: 23000, stock: 89, shopId: 9 },
+    { id: 286, name: "恒源祥 围巾 礼盒装 羊绒毛", price: 199, cat: "clothes", sales: 9800, stock: 90, shopId: 4 },
+    { id: 287, name: "三只松鼠 巨型零食大礼包", price: 129, cat: "food", sales: 72000, stock: 50, shopId: 10 },
+    { id: 288, name: "白象 老坛酸菜牛肉面 整箱", price: 59, cat: "food", sales: 85000, stock: 51, shopId: 10 },
+    { id: 289, name: "卫龙 魔芋爽 混合装 25包", price: 45, cat: "food", sales: 110000, stock: 52, shopId: 10 },
+    { id: 290, name: "洽洽 小黄袋每日坚果 混合", price: 89, cat: "food", sales: 78000, stock: 53, shopId: 10 },
+    { id: 291, name: "百草味 猪肉脯 零食 500g", price: 49, cat: "food", sales: 68000, stock: 54, shopId: 10 },
+    { id: 292, name: "娃哈哈 AD钙奶 220ml*20瓶", price: 39, cat: "food", sales: 96000, stock: 55, shopId: 10 },
+    { id: 293, name: "元气森林 气泡水 白桃味 12瓶", price: 69, cat: "food", sales: 60000, stock: 56, shopId: 10 },
+    { id: 294, name: "汇源 100%纯果汁 1L*2瓶", price: 39, cat: "food", sales: 52000, stock: 57, shopId: 10 },
+    { id: 295, name: "金龙鱼 稻花香大米 5kg", price: 59, cat: "food", sales: 81000, stock: 58, shopId: 10 },
+    { id: 296, name: "鲁花 5S压榨花生油 5L", price: 129, cat: "food", sales: 47000, stock: 59, shopId: 10 },
+    { id: 297, name: "海天 金标生抽 味极鲜 1.9L", price: 19, cat: "food", sales: 73000, stock: 60, shopId: 10 },
+    { id: 298, name: "桥头 火锅底料 麻辣 150g*2", price: 29, cat: "food", sales: 62000, stock: 61, shopId: 10 },
+    { id: 299, name: "双汇 王中王火腿肠 40根", price: 45, cat: "food", sales: 89000, stock: 62, shopId: 10 },
+    { id: 300, name: "伊利 安慕希 希腊酸奶 12盒", price: 59, cat: "food", sales: 64000, stock: 63, shopId: 10 },
+    { id: 301, name: "普洱 小种红茶 滇红 150g", price: 89, cat: "food", sales: 22000, stock: 64, shopId: 10 },
+    { id: 302, name: "大红袍 武夷岩茶 罐装 250g", price: 129, cat: "food", sales: 18000, stock: 65, shopId: 10 },
+    { id: 303, name: "星巴克 原磨咖啡豆 中度烘焙", price: 89, cat: "food", sales: 36000, stock: 66, shopId: 10 },
+    { id: 304, name: "雀巢 即溶咖啡 1+2 60条", price: 79, cat: "food", sales: 45000, stock: 67, shopId: 10 },
+    { id: 305, name: "费列罗 榛果巧克力 盒装 24粒", price: 139, cat: "food", sales: 51000, stock: 68, shopId: 10 },
+    { id: 306, name: "德芙 丝滑牛奶巧克力 碗装", price: 49, cat: "food", sales: 68000, stock: 69, shopId: 10 },
+    { id: 307, name: "徐福记 沙琪玛 软糯 900g", price: 39, cat: "food", sales: 58000, stock: 70, shopId: 10 },
+    { id: 308, name: "稻香村 月饼礼盒 团团圆圆", price: 89, cat: "food", sales: 42000, stock: 71, shopId: 10 },
+    { id: 309, name: "云南白药 酸枣仁 茯苓 冲饮", price: 59, cat: "food", sales: 12000, stock: 72, shopId: 10 },
+    { id: 310, name: "同仁堂 枸杞 宁夏头茬 250g", price: 69, cat: "food", sales: 38000, stock: 73, shopId: 10 },
+    { id: 311, name: "中粮 山茶油 特级冷榨 750ml", price: 99, cat: "food", sales: 16000, stock: 74, shopId: 10 },
+    { id: 312, name: "十月稻田 五常大米 10kg", price: 129, cat: "food", sales: 29000, stock: 75, shopId: 10 },
+    { id: 313, name: "海底捞 自热火锅 麻辣 三盒", price: 99, cat: "food", sales: 46000, stock: 76, shopId: 10 },
+    { id: 314, name: "自嗨锅 自热米饭 台式卤肉", price: 39, cat: "food", sales: 58000, stock: 77, shopId: 10 },
+    { id: 315, name: "奥利奥 夹心饼干 家庭装 971g", price: 39, cat: "food", sales: 62000, stock: 78, shopId: 10 },
+    { id: 316, name: "乐事 薯片 六联包 家庭分享", price: 35, cat: "food", sales: 78000, stock: 79, shopId: 10 },
+    { id: 317, name: "蒙牛 每日鲜语 鲜牛奶 950ml", price: 39, cat: "food", sales: 44000, stock: 80, shopId: 10 },
+    { id: 318, name: "光明 如实 无糖酸奶 6杯", price: 55, cat: "food", sales: 36000, stock: 81, shopId: 10 },
+    { id: 319, name: "金锣 猪肉脯 麻辣烧烤味 500g", price: 49, cat: "food", sales: 52000, stock: 82, shopId: 10 },
+    { id: 320, name: "良品铺子 蛋白代餐棒 混合", price: 69, cat: "food", sales: 27000, stock: 83, shopId: 10 },
+    { id: 321, name: "江中 猴姑 小米粥 即食 12杯", price: 89, cat: "food", sales: 19000, stock: 84, shopId: 10 },
+    { id: 322, name: "燕之屋 冰糖即食燕窝 75g*8", price: 899, cat: "food", sales: 8600, stock: 85, shopId: 10 },
+    { id: 323, name: "小罐茶 白茶 头采 50g", price: 299, cat: "food", sales: 19000, stock: 86, shopId: 10 },
+    { id: 324, name: "张裕 经典干红葡萄酒 750ml*2", price: 199, cat: "food", sales: 24000, stock: 87, shopId: 10 },
+    { id: 325, name: "青岛 啤酒 经典 500ml*24罐", price: 129, cat: "food", sales: 36000, stock: 88, shopId: 10 },
+    { id: 326, name: "哈尔滨 精酿白啤 福佳白", price: 139, cat: "food", sales: 21000, stock: 89, shopId: 10 },
+    { id: 327, name: "可乐 可口可乐 无糖 330ml*24", price: 89, cat: "food", sales: 82000, stock: 90, shopId: 10 },
+    { id: 328, name: "SK-II 神仙水 精华水 230ml", price: 1540, cat: "beauty", sales: 8800, stock: 50, shopId: 10 },
+    { id: 329, name: "海蓝之谜 经典面霜 60ml", price: 3990, cat: "beauty", sales: 5200, stock: 51, shopId: 10 },
+    { id: 330, name: "兰芝 补水保湿套装 四件", price: 899, cat: "beauty", sales: 9600, stock: 52, shopId: 10 },
+    { id: 331, name: "赫莲娜 绿宝瓶精华 50ml", price: 1690, cat: "beauty", sales: 5800, stock: 53, shopId: 10 },
+    { id: 332, name: "修丽可 果酸精华 30ml", price: 780, cat: "beauty", sales: 6400, stock: 54, shopId: 10 },
+    { id: 333, name: "倩碧 黄油经典 乳液 125ml", price: 499, cat: "beauty", sales: 12000, stock: 55, shopId: 10 },
+    { id: 334, name: "科颜氏 高保湿面霜 50ml", price: 549, cat: "beauty", sales: 8800, stock: 56, shopId: 10 },
+    { id: 335, name: "雅漾 舒缓喷雾 300ml*2", price: 199, cat: "beauty", sales: 14000, stock: 57, shopId: 10 },
+    { id: 336, name: "薇诺娜 修护霜 敏感肌 50g", price: 299, cat: "beauty", sales: 16000, stock: 58, shopId: 10 },
+    { id: 337, name: "珀莱雅 双抗精华 30ml", price: 319, cat: "beauty", sales: 18000, stock: 59, shopId: 10 },
+    { id: 338, name: "玉泽 屏障修护乳 50ml", price: 179, cat: "beauty", sales: 12000, stock: 60, shopId: 10 },
+    { id: 339, name: "至本 洁面乳 氨基酸 温和", price: 79, cat: "beauty", sales: 22000, stock: 61, shopId: 10 },
+    { id: 340, name: "理肤泉 B5 修复霜 100ml", price: 169, cat: "beauty", sales: 20000, stock: 62, shopId: 10 },
+    { id: 341, name: "珀莱雅 抗皱紧致眼霜 30g", price: 299, cat: "beauty", sales: 13000, stock: 63, shopId: 10 },
+    { id: 342, name: "自然堂 小紫瓶 精华 升级", price: 399, cat: "beauty", sales: 11000, stock: 64, shopId: 10 },
+    { id: 343, name: "百雀羚 水乳套装 国货", price: 249, cat: "beauty", sales: 15000, stock: 65, shopId: 10 },
+    { id: 344, name: "Dior 迪奥 香水 花漾淡香 100ml", price: 1280, cat: "beauty", sales: 6200, stock: 66, shopId: 10 },
+    { id: 345, name: "chanel 香奈儿 五号香水 100ml", price: 1049, cat: "beauty", sales: 4800, stock: 67, shopId: 10 },
+    { id: 346, name: "祖玛珑 蓝风铃香水 30ml", price: 599, cat: "beauty", sales: 7800, stock: 68, shopId: 10 },
+    { id: 347, name: "阿玛尼 挚爱 香水 90ml", price: 899, cat: "beauty", sales: 5400, stock: 69, shopId: 10 },
+    { id: 348, name: "美宝莲 轻雾唇釉 明星色号", price: 89, cat: "beauty", sales: 26000, stock: 70, shopId: 10 },
+    { id: 349, name: "MAC 哑光口红 显白 焕日", price: 169, cat: "beauty", sales: 24000, stock: 71, shopId: 10 },
+    { id: 350, name: "YSL 圣罗兰 小金条 口红 21#", price: 289, cat: "beauty", sales: 22000, stock: 72, shopId: 10 },
+    { id: 351, name: "纪梵希 红丝绒 口红 N25", price: 309, cat: "beauty", sales: 18000, stock: 73, shopId: 10 },
+    { id: 352, name: "兰蔻 粉底液 持妆 30ml", price: 420, cat: "beauty", sales: 9800, stock: 74, shopId: 10 },
+    { id: 353, name: "雅诗兰黛 粉底液 金澈 持妆", price: 449, cat: "beauty", sales: 8800, stock: 75, shopId: 10 },
+    { id: 354, name: "阿玛尼 大师 粉底液 30ml", price: 475, cat: "beauty", sales: 7200, stock: 76, shopId: 10 },
+    { id: 355, name: "Byredo 香氛 之秋水 50ml", price: 799, cat: "beauty", sales: 3600, stock: 77, shopId: 10 },
+    { id: 356, name: "欧舒丹 护手霜 乳木果 3件", price: 199, cat: "beauty", sales: 19000, stock: 78, shopId: 10 },
+    { id: 357, name: "妮维雅 润肤乳 大瓶 585ml", price: 79, cat: "beauty", sales: 17000, stock: 79, shopId: 10 },
+    { id: 358, name: "凡士林 身体乳 烟酰胺 女士", price: 59, cat: "beauty", sales: 22000, stock: 80, shopId: 10 },
+    { id: 359, name: "霸王 防脱洗发水 育发 750ml", price: 139, cat: "beauty", sales: 16000, stock: 81, shopId: 10 },
+    { id: 360, name: "施华蔻 护发精油 小金瓶", price: 89, cat: "beauty", sales: 14000, stock: 82, shopId: 10 },
+    { id: 361, name: "卡诗 头皮滋养 洗发水 去屑", price: 369, cat: "beauty", sales: 7200, stock: 83, shopId: 10 },
+    { id: 362, name: "完美日记 眼影盘 十二色", price: 129, cat: "beauty", sales: 18000, stock: 84, shopId: 10 },
+    { id: 363, name: "花西子 空气蜜粉 定妆散粉", price: 169, cat: "beauty", sales: 17000, stock: 85, shopId: 10 },
+    { id: 364, name: "小奥汀 眼线笔 极细 防晕", price: 79, cat: "beauty", sales: 19000, stock: 86, shopId: 10 },
+    { id: 365, name: "橘朵 腮红 浮雕 花瓣渐变", price: 59, cat: "beauty", sales: 21000, stock: 87, shopId: 10 },
+    { id: 366, name: "毛戈平 光影 腮红 高光", price: 199, cat: "beauty", sales: 7800, stock: 88, shopId: 10 },
+    { id: 367, name: "uniduo 玻尿酸 水乳 深层补水", price: 299, cat: "beauty", sales: 12000, stock: 89, shopId: 10 },
+    { id: 368, name: "膜法世家 补水 面膜 20片", price: 129, cat: "beauty", sales: 23000, stock: 90, shopId: 10 },
+    { id: 369, name: "迪卡侬 登山杖 折叠 超轻减震", price: 199, cat: "sports", sales: 12000, stock: 50, shopId: 9 },
+    { id: 370, name: "骆驼 户外帐篷 双人 防雨", price: 399, cat: "sports", sales: 14000, stock: 51, shopId: 6 },
+    { id: 371, name: "凯乐石 徒步背包 55L 防雨罩", price: 899, cat: "sports", sales: 5600, stock: 52, shopId: 10 },
+    { id: 372, name: "始祖鸟 速干T恤 户外 男", price: 599, cat: "sports", sales: 7200, stock: 53, shopId: 3 },
+    { id: 373, name: "红双喜 乒乓球拍 成品拍 双人", price: 399, cat: "sports", sales: 18000, stock: 54, shopId: 9 },
+    { id: 374, name: "尤尼克斯 羽毛球 耐打 12只", price: 89, cat: "sports", sales: 20000, stock: 55, shopId: 6 },
+    { id: 375, name: "威尔逊 排球 比赛用球 5号", price: 199, cat: "sports", sales: 7800, stock: 56, shopId: 10 },
+    { id: 376, name: "斯伯丁 篮球架 户外 可升降", price: 1299, cat: "sports", sales: 6400, stock: 57, shopId: 3 },
+    { id: 377, name: "李宁 运动水杯 便携 大容量", price: 99, cat: "sports", sales: 26000, stock: 58, shopId: 9 },
+    { id: 378, name: "特步 速干运动服 套装 男", price: 259, cat: "sports", sales: 16000, stock: 59, shopId: 6 },
+    { id: 379, name: "安踏 跑步腰包 便携 手机包", price: 69, cat: "sports", sales: 18000, stock: 60, shopId: 10 },
+    { id: 380, name: "匹克 篮球鞋 实战 耐磨", price: 399, cat: "sports", sales: 13000, stock: 61, shopId: 3 },
+    { id: 381, name: "361° 运动套装 卫衣裤", price: 199, cat: "sports", sales: 12000, stock: 62, shopId: 9 },
+    { id: 382, name: "德尔惠 瑜伽垫 加厚 防滑", price: 159, cat: "sports", sales: 21000, stock: 63, shopId: 6 },
+    { id: 383, name: "Keep 跳绳 无绳 双用 计数", price: 129, cat: "sports", sales: 17000, stock: 64, shopId: 10 },
+    { id: 384, name: "小米 走步机 折叠 静音", price: 1299, cat: "sports", sales: 6200, stock: 65, shopId: 3 },
+    { id: 385, name: "野小兽 动感单车 家用", price: 899, cat: "sports", sales: 6400, stock: 66, shopId: 9 },
+    { id: 386, name: "百欧 跑步机 家用 智能 可折叠", price: 1999, cat: "sports", sales: 7800, stock: 67, shopId: 6 },
+    { id: 387, name: "舒华 椭圆机 家用 磁控", price: 1899, cat: "sports", sales: 4800, stock: 68, shopId: 10 },
+    { id: 388, name: "乔山 划船机 家用 风阻", price: 1599, cat: "sports", sales: 3600, stock: 69, shopId: 3 },
+    { id: 389, name: "迪卡侬 瑜伽服 运动内衣", price: 129, cat: "sports", sales: 18000, stock: 70, shopId: 9 },
+    { id: 390, name: "尤尼克斯 网球拍 全碳素 专业", price: 1299, cat: "sports", sales: 5200, stock: 71, shopId: 6 },
+    { id: 391, name: "威尔逊 网球 大容量 三只", price: 99, cat: "sports", sales: 8600, stock: 72, shopId: 10 },
+    { id: 392, name: "李宁 乒乓球台 家用户外", price: 899, cat: "sports", sales: 4200, stock: 73, shopId: 3 },
+    { id: 393, name: "红双喜 羽毛球 拉线 专业", price: 279, cat: "sports", sales: 6400, stock: 74, shopId: 9 },
+    { id: 394, name: "三叶草 运动袜 五双 舒适", price: 49, cat: "sports", sales: 22000, stock: 75, shopId: 6 },
+    { id: 395, name: "迪卡侬 哑铃 可调节 杠铃套装", price: 499, cat: "sports", sales: 7800, stock: 76, shopId: 10 },
+    { id: 396, name: "铁人 助力带 引体向上 健身", price: 39, cat: "sports", sales: 19000, stock: 77, shopId: 3 },
+    { id: 397, name: "奥力 健腹轮 家用 静音", price: 79, cat: "sports", sales: 15000, stock: 78, shopId: 9 },
+    { id: 398, name: "飞镖 套装 磁吸 家用 靶盘", price: 89, cat: "sports", sales: 11000, stock: 79, shopId: 6 },
+    { id: 399, name: "乐跑 轮滑鞋 成人 可调", price: 349, cat: "sports", sales: 6800, stock: 80, shopId: 10 },
+    { id: 400, name: "迪卡侬 滑板 四轮 蓝色 成人", price: 299, cat: "sports", sales: 5400, stock: 81, shopId: 3 },
+    { id: 401, name: "骆驼 冲锋衣 三合一 保暖 防寒", price: 899, cat: "sports", sales: 8800, stock: 82, shopId: 9 },
+    { id: 402, name: "探路者 登山鞋 防滑 透气", price: 599, cat: "sports", sales: 12000, stock: 83, shopId: 6 },
+    { id: 403, name: "李宁 加绒 卫衣 冬款", price: 299, cat: "sports", sales: 9900, stock: 84, shopId: 10 },
+    { id: 404, name: "安踏 皮肤衣 防晒 轻薄", price: 199, cat: "sports", sales: 14000, stock: 85, shopId: 3 },
+    { id: 405, name: "迪卡侬 骑行头盔 一体成型", price: 199, cat: "sports", sales: 13000, stock: 86, shopId: 9 },
+    { id: 406, name: "捷安特 公路车 入门 变速", price: 1999, cat: "sports", sales: 3600, stock: 87, shopId: 6 },
+    { id: 407, name: "美利达 山地车 越野 27速", price: 1599, cat: "sports", sales: 4800, stock: 88, shopId: 10 },
+    { id: 408, name: "大行 折叠车 通勤 20寸", price: 1299, cat: "sports", sales: 5400, stock: 89, shopId: 3 },
+    { id: 409, name: "骆驼 太空杯 运动 保温 1L", price: 129, cat: "sports", sales: 11000, stock: 90, shopId: 9 },
+    { id: 410, name: "《JavaScript高级程序设计》第4版", price: 99, cat: "book", sales: 7200, stock: 50, shopId: 10 },
+    { id: 411, name: "《深入理解Java虚拟机》第3版", price: 128, cat: "book", sales: 6800, stock: 51, shopId: 10 },
+    { id: 412, name: "《算法导论》第3版 中文", price: 128, cat: "book", sales: 5400, stock: 52, shopId: 10 },
+    { id: 413, name: "《代码整洁之道》中文版", price: 79, cat: "book", sales: 8600, stock: 53, shopId: 10 },
+    { id: 414, name: "《重构：改善既有代码的设计》", price: 89, cat: "book", sales: 5200, stock: 54, shopId: 10 },
+    { id: 415, name: "《设计模式》GoF 可复用", price: 69, cat: "book", sales: 4800, stock: 55, shopId: 10 },
+    { id: 416, name: "《Effective Python》第2版", price: 89, cat: "book", sales: 3600, stock: 56, shopId: 10 },
+    { id: 417, name: "《流畅的Python》第2版", price: 119, cat: "book", sales: 4200, stock: 57, shopId: 10 },
+    { id: 418, name: "《凤凰架构》现代软件工程", price: 99, cat: "book", sales: 3600, stock: 58, shopId: 10 },
+    { id: 419, name: "《Redis设计与实现》", price: 89, cat: "book", sales: 4400, stock: 59, shopId: 10 },
+    { id: 420, name: "《MySQL必知必会》中文", price: 59, cat: "book", sales: 8600, stock: 60, shopId: 10 },
+    { id: 421, name: "《Linux内核设计与实现》第3版", price: 79, cat: "book", sales: 3200, stock: 61, shopId: 10 },
+    { id: 422, name: "《网络是怎样连接的》(图解)", price: 49, cat: "book", sales: 5800, stock: 62, shopId: 10 },
+    { id: 423, name: "《图解HTTP》全彩", price: 59, cat: "book", sales: 7200, stock: 63, shopId: 10 },
+    { id: 424, name: "《三体》之黑暗森林 单行本", price: 39, cat: "book", sales: 26000, stock: 64, shopId: 10 },
+    { id: 425, name: "《三体》死神永生 全本", price: 42, cat: "book", sales: 24000, stock: 65, shopId: 10 },
+    { id: 426, name: "《活着》余华 精装版", price: 39, cat: "book", sales: 18000, stock: 66, shopId: 10 },
+    { id: 427, name: "《解忧杂货店》东野圭吾", price: 45, cat: "book", sales: 16000, stock: 67, shopId: 10 },
+    { id: 428, name: "《百年孤独》平装速读版", price: 45, cat: "book", sales: 14000, stock: 68, shopId: 10 },
+    { id: 429, name: "《人类简史》从动物到上帝", price: 59, cat: "book", sales: 19000, stock: 69, shopId: 10 },
+    { id: 430, name: "《未来简史》从智人到智神", price: 59, cat: "book", sales: 12000, stock: 70, shopId: 10 },
+    { id: 431, name: "《原则》瑞·达利欧 精装", price: 79, cat: "book", sales: 9800, stock: 71, shopId: 10 },
+    { id: 432, name: "《贫穷的本质》诺奖作品", price: 59, cat: "book", sales: 7600, stock: 72, shopId: 10 },
+    { id: 433, name: "《思考，快与慢》经典版", price: 69, cat: "book", sales: 8200, stock: 73, shopId: 10 },
+    { id: 434, name: "《刻意练习》如何成为高手", price: 49, cat: "book", sales: 11000, stock: 74, shopId: 10 },
+    { id: 435, name: "《金字塔原理》麦肯锡", price: 49, cat: "book", sales: 8800, stock: 75, shopId: 10 },
+    { id: 436, name: "《非暴力沟通》修订版", price: 45, cat: "book", sales: 13000, stock: 76, shopId: 10 },
+    { id: 437, name: "《显微镜下的大明》马伯庸", price: 59, cat: "book", sales: 6800, stock: 77, shopId: 10 },
+    { id: 438, name: "《长安的荔枝》马伯庸 单行", price: 49, cat: "book", sales: 11000, stock: 78, shopId: 10 },
+    { id: 439, name: "《云边有个小卖部》张嘉佳", price: 49, cat: "book", sales: 12000, stock: 79, shopId: 10 },
+    { id: 440, name: "《平凡的世界》全三册", price: 89, cat: "book", sales: 15000, stock: 80, shopId: 10 },
+    { id: 441, name: "《白鹿原》陈忠实 精装", price: 69, cat: "book", sales: 9800, stock: 81, shopId: 10 },
+    { id: 442, name: "《人生海海》麦家 独家彩插", price: 69, cat: "book", sales: 7200, stock: 82, shopId: 10 },
+    { id: 443, name: "《基督山伯爵》上下 译林", price: 109, cat: "book", sales: 6800, stock: 83, shopId: 10 },
+    { id: 444, name: "《百年孤独》+《霍乱》(双册)", price: 108, cat: "book", sales: 5200, stock: 84, shopId: 10 },
+    { id: 445, name: "《红楼梦》人民文学 精装", price: 169, cat: "book", sales: 8600, stock: 85, shopId: 10 },
+    { id: 446, name: "《西游记》无障碍 注音版", price: 99, cat: "book", sales: 9800, stock: 86, shopId: 10 },
+    { id: 447, name: "《史记》精编 名篇 白话详解", price: 129, cat: "book", sales: 6400, stock: 87, shopId: 10 },
+    { id: 448, name: "《资治通鉴》白话本 全译", price: 199, cat: "book", sales: 5800, stock: 88, shopId: 10 },
+    { id: 449, name: "《中国通史》上下册 精装", price: 158, cat: "book", sales: 7200, stock: 89, shopId: 10 },
+    { id: 450, name: "《岛上书店》治愈系小说", price: 39, cat: "book", sales: 8600, stock: 90, shopId: 10 },
+];
 
     // ========== 工具函数 ==========
     function $(id) { return document.getElementById(id); }
@@ -1458,9 +1990,113 @@
         $('detailShopName').innerText = shop ? shop.name : '';
         $('detailShopStats').innerText = shop ? ('评分 ' + shop.rating + '  月销 ' + formatPrice(shop.sales)) : '';
 
+        // 广告长图：真实长图，按商品 id 差异化（onerror 兜底防裂图）
+        $('detailLong').innerHTML = buildDetailLong(p);
+
+        buildDetailTabs(p);
+        showDetailTab('desc');
+
         hideAll();
         show('detailBox');
     }
+
+    // ---------- 详情页 长图/描述分区/使用方法/免责声明/猜你喜欢 ----------
+    var detailTabHtml = {};
+
+    function buildDetailTabs(p) {
+        detailTabHtml = {
+            desc: detailDescHtml(p),
+            usage: detailUsageHtml(p),
+            disclaimer: detailDisclaimerHtml(p),
+            recommend: recommendHtml(p)
+        };
+    }
+
+    function showDetailTab(name) {
+        document.querySelectorAll('#detailTabs .tab').forEach(function (el) {
+            el.classList.toggle('active', el.getAttribute('data-tab') === name);
+        });
+        var panel = $('detailPanel');
+        if (detailTabHtml[name]) panel.innerHTML = detailTabHtml[name];
+        if (name === 'recommend') {
+            panel.querySelectorAll('.reco-card').forEach(function (card) {
+                card.onclick = function () { showDetail(parseInt(this.getAttribute('data-id'))); };
+            });
+        }
+    }
+
+    function detailDescHtml(p) {
+        var catN = catName(p.cat);
+        var spec = {
+            phone: '旗舰影像 · 高刷直屏 · 全天候续航，支持双卡双待与全场景互联。',
+            computer: '旗舰性能释放 · 高色域屏幕 · 压感键盘，兼顾创作、办公与影音。',
+            audio: '无损音质调校 · 主动降噪 · 长续航便携，还原人声与器乐细节。',
+            wearable: '健康数据全天监测 · 独立通讯 · IP68 防水，适配日常与运动场景。',
+            home: '智能互联 · 一级能效 · 静音运行，省心又省电。',
+            clothes: '人体工学剪裁 · 耐磨面料 · 休闲百搭，通勤与日常两相宜。',
+            food: '新鲜直采 · 冷链运输 · 独立小包装，锁住原味更安心。',
+            beauty: '温和配方 · 敏肌可用 · 持妆服帖，早晚护肤一步到位。',
+            sports: '专业级工艺 · 轻量耐用 · 减震缓震，助力每一次突破。',
+            book: '正版授权 · 精装护目纸张 · 文理兼蓄，常读常新。'
+        };
+        return '<h4>' + p.name + '</h4>' +
+            '<p>' + (spec[p.cat] || '正品保障，品质之选。') + '</p>' +
+            '<h4>核心亮点</h4><ul>' +
+            '<li>商品：' + p.name + '</li>' +
+            '<li>分类：' + catN + '</li>' +
+            '<li>售价：¥' + formatPrice(p.price) + '（活动价以结算页为准）</li>' +
+            '<li>销量：' + formatPrice(p.sales) + ' 件 · 库存：' + p.stock + ' 件</li>' +
+            '<li>服务：7 天无理由退换 · 全国联保 · 极速发货</li>' +
+            '</ul>' +
+            '<h4>包装清单</h4><ul>' +
+            '<li>商品主机 × 1</li><li>说明书 / 质保卡 × 1</li><li>原厂附件（以实物为准）</li>' +
+            '</ul>';
+    }
+
+    function detailUsageHtml(p) {
+        var tips = {
+            phone: '<li>首次使用前请充满电，并按提示完成系统激活。</li><li>建议佩戴官方保护壳与钢化膜，避免高强度磕碰。</li><li>充电时请使用随附数据线与原装充电器。</li>',
+            computer: '<li>首次开机按向导初始化系统并联网激活。</li><li>进风口保持清洁，避免长时间高温运行。</li><li>重要数据建议定期备份。</li>',
+            audio: '<li>首次使用先连接蓝牙并完成配对。</li><li>长时间聆听注意音量适中，保护听力。</li><li>耳机单元用干软布清洁，勿直接用水冲洗。</li>'
+        };
+        return '<h4>使用前请阅读</h4><ul>' + (tips[p.cat] || '<li>请参照随附说明书操作，避免超范围使用。</li><li>存放于阴凉干燥处，远离火源与潮湿环境。</li><li>如出现异常，请立即停用并联系售后。</li>') + '</ul>' +
+            '<h4>维护与保养</h4><ul><li>按说明书周期清洁，保持干燥。</li><li>长期不用时断电存放。</li><li>配件缺失可通过官方渠道单独购买。</li></ul>';
+    }
+
+    function detailDisclaimerHtml(p) {
+        return '<h4>免责声明</h4>' +
+            '<p>1. 页面展示的图片、参数与说明为示意，实际以收到实物及厂家发布的最新信息为准。</p>' +
+            '<p>2. 因网络环境等因素导致的页面价格波动，以下单结算金额为准。</p>' +
+            '<p>3. 电子产品屏幕存在个体差异，属行业正常现象，不影响正常使用。</p>' +
+            '<p>4. 营销文案不构成承诺，促销活动最终解释权归商家所有。</p>' +
+            '<h4>售后保障</h4><p>自签收次日起 7 天无理由退换；15 天内质量问题换新；一年内全国联保免费维修。</p>' +
+            '<p style="color:#999;font-size:12px;">本 demo 为纯前端演示项目，商品信息仅供功能演示，不产生真实交易。</p>';
+    }
+
+    function recommendHtml(p) {
+        var same = products.filter(function (x) { return x.cat === p.cat && x.id !== p.id; });
+        same.sort(function (a, b) { return b.sales - a.sales; });
+        var pool = same.slice(0, 5);
+        if (pool.length < 5) {
+            var other = products.slice().filter(function (x) { return x.cat !== p.cat && x.id !== p.id; });
+            other.sort(function (a, b) { return b.sales - a.sales; });
+            pool = pool.concat(other.slice(0, 5 - pool.length));
+        }
+        var html = '<div class="reco-head">看了又看 · 为你推荐</div><div class="reco-grid">';
+        pool.forEach(function (r) {
+            html += '<div class="reco-card" data-id="' + r.id + '">' +
+                '<img src="' + pimg(r.id, 400, 300) + '" alt="' + r.name + '" onerror="imgFallback(this)">' +
+                '<div class="rc-name">' + r.name + '</div>' +
+                '<div class="rc-price"><small>¥</small>' + formatPrice(r.price) + '</div></div>';
+        });
+        html += '</div>';
+        return html;
+    }
+
+    // 分区标签切换：一次性绑定
+    document.querySelectorAll('#detailTabs .tab').forEach(function (tab) {
+        tab.onclick = function () { showDetailTab(this.getAttribute('data-tab')); };
+    });
 
     function catName(cat) {
         var map = {
@@ -2424,10 +3060,10 @@
 
     // ========== 广告轮播 ==========
     var BANNERS = [
-        { img: 'https://picsum.photos/seed/banner1/1200/300', text: '双11狂欢节 全场满300减30' },
-        { img: 'https://picsum.photos/seed/banner2/1200/300', text: '新品首发 iPhone 15 Pro 直降800' },
-        { img: 'https://picsum.photos/seed/banner3/1200/300', text: '秋季焕新 美妆个护 5折起' },
-        { img: 'https://picsum.photos/seed/banner4/1200/300', text: '数码狂欢 以旧换新至高补贴1000元' }
+        { img: 'https://loremflickr.com/1200/300/shopping?lock=101', text: '双11狂欢节 全场满300减30' },
+        { img: 'https://loremflickr.com/1200/300/smartphone?lock=102', text: '新品首发 iPhone 15 Pro 直降800' },
+        { img: 'https://loremflickr.com/1200/300/cosmetics?lock=103', text: '秋季焕新 美妆个护 5折起' },
+        { img: 'https://loremflickr.com/1200/300/laptop?lock=104', text: '数码狂欢 以旧换新至高补贴1000元' }
     ];
     var bannerIndex = 0;
     var bannerTimer = null;

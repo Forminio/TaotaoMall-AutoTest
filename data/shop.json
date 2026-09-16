@@ -1,12 +1,12 @@
 [
-  {"shop_id": 1, "name": "Apple官方旗舰店", "rating": "4.9", "main": "手机", "location": "广东深圳", "since": "2015", "product_count": 5},
-  {"shop_id": 2, "name": "华为官方旗舰店", "rating": "4.9", "main": "手机", "location": "广东东莞", "since": "2012", "product_count": 3},
-  {"shop_id": 3, "name": "小米官方旗舰店", "rating": "4.8", "main": "手机", "location": "北京", "since": "2010", "product_count": 3},
-  {"shop_id": 4, "name": "OPPO官方旗舰店", "rating": "4.8", "main": "智能手机", "location": "广东东莞", "since": "2011", "product_count": 1},
-  {"shop_id": 5, "name": "联想拯救者旗舰店", "rating": "4.7", "main": "游戏本", "location": "北京", "since": "2014", "product_count": 1},
-  {"shop_id": 6, "name": "索尼官方旗舰店", "rating": "4.9", "main": "耳机", "location": "上海", "since": "2013", "product_count": 2},
-  {"shop_id": 7, "name": "戴尔旗舰店", "rating": "4.6", "main": "笔记本", "location": "福建厦门", "since": "2016", "product_count": 1},
-  {"shop_id": 8, "name": "声学影音综合店", "rating": "4.6", "main": "耳机", "location": "广东广州", "since": "2018", "product_count": 2},
-  {"shop_id": 9, "name": "服饰鞋包旗舰店", "rating": "4.7", "main": "服饰", "location": "浙江杭州", "since": "2017", "product_count": 4},
-  {"shop_id": 10, "name": "淘淘生活优选超市", "rating": "4.5", "main": "食品", "location": "江苏南京", "since": "2019", "product_count": 18}
+  {"shop_id": 1, "name": "Apple官方旗舰店", "rating": "4.9", "main": "手机", "location": "广东深圳", "since": "2015", "product_count": 48},
+  {"shop_id": 2, "name": "华为官方旗舰店", "rating": "4.9", "main": "手机", "location": "广东东莞", "since": "2012", "product_count": 45},
+  {"shop_id": 3, "name": "小米官方旗舰店", "rating": "4.8", "main": "手机", "location": "北京", "since": "2010", "product_count": 47},
+  {"shop_id": 4, "name": "OPPO官方旗舰店", "rating": "4.8", "main": "智能手机", "location": "广东东莞", "since": "2011", "product_count": 35},
+  {"shop_id": 5, "name": "联想拯救者旗舰店", "rating": "4.7", "main": "游戏本", "location": "北京", "since": "2014", "product_count": 10},
+  {"shop_id": 6, "name": "索尼官方旗舰店", "rating": "4.9", "main": "耳机", "location": "上海", "since": "2013", "product_count": 33},
+  {"shop_id": 7, "name": "戴尔旗舰店", "rating": "4.6", "main": "笔记本", "location": "福建厦门", "since": "2016", "product_count": 9},
+  {"shop_id": 8, "name": "声学影音综合店", "rating": "4.6", "main": "耳机", "location": "广东广州", "since": "2018", "product_count": 20},
+  {"shop_id": 9, "name": "服饰鞋包旗舰店", "rating": "4.7", "main": "服饰", "location": "浙江杭州", "since": "2017", "product_count": 29},
+  {"shop_id": 10, "name": "淘淘生活优选超市", "rating": "4.5", "main": "食品", "location": "江苏南京", "since": "2019", "product_count": 174}
 ]

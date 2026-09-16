@@ -7,7 +7,7 @@ sys.path.insert(0, str(ROOT))
 
 from scripts.test_login import TestLogin
 from scripts.test_product import TestProduct
-from scripts.test_detail import TestDetail
+from scripts.test_detail import TestDetail, TestDetailRich
 from scripts.test_cart import TestCart
 from scripts.test_address import TestAddress
 from scripts.test_order import TestOrder
@@ -37,7 +37,7 @@ def main():
     loader = unittest.TestLoader()
     suite = unittest.TestSuite()
 
-    for cls in [TestLogin, TestRegister, TestProduct, TestDetail, TestCart,
+    for cls in [TestLogin, TestRegister, TestProduct, TestDetail, TestDetailRich, TestCart,
                 TestAddress, TestOrder, TestCoupon, TestUser,
                 TestShop, TestShopReverse, TestUserCenter, TestUserCenterReverse,
                 TestAddressManage, TestPagination,

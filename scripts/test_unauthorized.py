@@ -60,9 +60,9 @@ class TestUnauthorized(BaseCase):
         self.assertEqual(self.user.page_get_user_info(), "未登录")
 
     def test_browse_products_without_login(self):
-        """未登录浏览：可以切换分类查看商品列表"""
+        """未登录浏览：可以切换分类查看商品列表（首页铺满 15 件）"""
         self.product.page_click_category("phone")
-        self.assertEqual(self.product.page_get_product_count(), 4)
+        self.assertEqual(self.product.page_get_product_count(), 15)
 
     def test_add_cart_blocked_without_login(self):
         """未登录拦截：点击加入购物车弹出「请先登录」"""
