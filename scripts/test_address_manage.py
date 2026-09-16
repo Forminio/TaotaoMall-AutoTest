@@ -26,6 +26,15 @@ class TestAddressManage(BaseCase):
         login(self.driver)
         self.address.page_open_manage()
 
+    def test_address_pagination(self):
+        """地址管理：8 条地址分 2 页，第 2 页展示剩余 4 条"""
+        self.assertEqual(self.address.page_get_addr_count(), 4)
+        self.assertIn("共 8 条", self.address.page_get_addr_pager_info())
+        self.assertIn("1/2 页", self.address.page_get_addr_pager_info())
+
+        self.address.page_click_addr_page(2)
+        self.assertEqual(self.address.page_get_addr_count(), 4)
+
     def test_default_address_first(self):
         """地址管理：默认地址排名第一（排序）"""
         self.assertTrue(self.address.page_is_first_default())
@@ -37,8 +46,7 @@ class TestAddressManage(BaseCase):
 
     @parameterized.expand(get_data("address_manage"), doc_func=case_doc)
     def test_add_address(self, name, phone, detail, success):
-        """新增地址：合法保存成功（弹窗关闭+数量+1），非法停留在弹窗"""
-        before = self.address.page_get_addr_count()
+        """新增地址：合法保存成功（弹窗关闭+总数+1），非法停留在弹窗"""
         self.address.page_click_addr_add()
         self.assertTrue(self.address.page_modal_is_open())
 
@@ -47,10 +55,10 @@ class TestAddressManage(BaseCase):
 
         if success:
             self.assertFalse(self.address.page_modal_is_open())
-            self.assertEqual(self.address.page_get_addr_count(), before + 1)
+            self.assertIn("共 9 条", self.address.page_get_addr_pager_info())
         else:
             self.assertTrue(self.address.page_modal_is_open())
-            self.assertEqual(self.address.page_get_addr_count(), before)
+            self.assertIn("共 8 条", self.address.page_get_addr_pager_info())
 
     def test_edit_address(self):
         """地址管理：编辑后收货人与地址内容更新"""
@@ -59,10 +67,9 @@ class TestAddressManage(BaseCase):
         self.assertIn("中关村", self.address.page_get_addr_detail(0))
 
     def test_delete_address(self):
-        """地址管理：删除地址后数量减少"""
-        before = self.address.page_get_addr_count()
+        """地址管理：删除地址后总数减少"""
         self.address.page_delete_address(1)
-        self.assertEqual(self.address.page_get_addr_count(), before - 1)
+        self.assertIn("共 7 条", self.address.page_get_addr_pager_info())
 
     def test_set_default_address(self):
         """地址管理：设为默认后原默认失效，且新默认置顶"""

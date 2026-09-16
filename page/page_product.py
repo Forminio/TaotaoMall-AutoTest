@@ -73,3 +73,17 @@ class PageProduct(Base):
             if btn.text.strip() == "上一页":
                 btn.click()
                 return
+
+    # ---------- 搜索店铺 ----------
+    def page_search_shops_visible(self):
+        return self.base_find(page.search_shops).is_displayed()
+
+    def page_get_search_shop_count(self):
+        return len(self.base_finds(page.search_shop_cards))
+
+    def page_get_search_shop_names(self):
+        return [el.find_element(By.CSS_SELECTOR, ".sc-name").text
+                for el in self.base_finds(page.search_shop_cards)]
+
+    def page_click_search_shop(self, index=0):
+        self.base_finds(page.search_shop_cards)[index].click()

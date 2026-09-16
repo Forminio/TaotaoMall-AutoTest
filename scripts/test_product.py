@@ -43,6 +43,27 @@ class TestProduct(BaseCase):
 
         self.assertEqual(self.product.page_get_product_count(), expect_count)
 
+    def test_search_shop_result(self):
+        """搜索商家：关键词命中的店铺在商品列表上方展示"""
+        self.product.page_search("Apple")
+        self.assertTrue(self.product.page_search_shops_visible())
+        self.assertEqual(self.product.page_get_search_shop_count(), 1)
+        self.assertEqual(self.product.page_get_search_shop_names()[0], "Apple官方旗舰店")
+
+    def test_search_shop_enter(self):
+        """搜索商家：点击搜索结果店铺进入店铺页"""
+        from page.page_shop import PageShop
+        shop = PageShop(self.driver)
+        self.product.page_search("Apple")
+        self.product.page_click_search_shop(0)
+        self.assertTrue(shop.page_is_on_shop())
+        self.assertEqual(shop.page_get_shop_name(), "Apple官方旗舰店")
+
+    def test_search_no_shop_result(self):
+        """搜索商家：无店铺命中的关键词不展示店铺区"""
+        self.product.page_search("iPhone")
+        self.assertFalse(self.product.page_search_shops_visible())
+
 
 def tearDownModule():
     GetDriver().quit_driver()

@@ -44,6 +44,21 @@ class TestUser(BaseCase):
         self.order.page_click_view_orders()
         self.assertGreaterEqual(self.user.page_get_order_count(), 1)
 
+    def test_orders_pagination(self):
+        """我的订单：连下 4 单后订单列表分 2 页，第 2 页 1 单"""
+        for index in range(4):
+            checkout(self.driver, index)
+            self.address.page_fill_address("张三", "13800138000", "北京市朝阳区建国路88号")
+            self.address.page_click_submit()
+            self.order.page_click_back_home()
+
+        self.user.page_click_nav_orders()
+        self.assertEqual(self.user.page_get_order_count(), 3)
+        self.assertIn("1/2 页", self.user.page_get_orders_pager_info())
+
+        self.user.page_click_orders_page(2)
+        self.assertEqual(self.user.page_get_order_count(), 1)
+
 
 def tearDownModule():
     GetDriver().quit_driver()

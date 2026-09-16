@@ -107,6 +107,34 @@ nav_user_center = (By.ID, "navUserCenter")
 nav_seller_center = (By.ID, "navSellerCenter")
 nav_messages = (By.ID, "navMessages")
 nav_customer_service = (By.ID, "navCustomerService")
+nav_coupons = (By.ID, "navCoupons")
+nav_address = (By.ID, "navAddress")
+
+# ==================== 广告轮播 ====================
+banner_box = (By.ID, "bannerBox")
+banner_items = (By.CSS_SELECTOR, "#bannerView .banner-item")
+banner_active = (By.CSS_SELECTOR, "#bannerView .banner-item.active")
+banner_dots = (By.CSS_SELECTOR, "#bannerDots .banner-dot")
+banner_close_btn = (By.ID, "bannerCloseBtn")
+
+# ==================== 我的优惠券 ====================
+coupons_box = (By.ID, "couponsBox")
+coupon_cards = (By.CSS_SELECTOR, "#couponList .coupon-card")
+coupon_use_btns = (By.CSS_SELECTOR, "#couponList .cc-use")
+coupon_statuses = (By.CSS_SELECTOR, "#couponList .cc-status")
+coupon_titles = (By.CSS_SELECTOR, "#couponList .cc-title")
+coupons_back_btn = (By.ID, "couponsBackBtn")
+uc_my_coupons = (By.ID, "ucMyCoupons")
+
+# ==================== 搜索店铺 ====================
+search_shops = (By.ID, "searchShops")
+search_shop_cards = (By.CSS_SELECTOR, "#searchShops .shop-card")
+
+# ==================== 卖家中心增强 ====================
+seller_tabs = (By.CSS_SELECTOR, "#sellerTabs .seller-tab")
+seller_rank_items = (By.CSS_SELECTOR, "#sellerRank .rank-item")
+seller_rank_names = (By.CSS_SELECTOR, "#sellerRank .rank-name")
+seller_rank_sales = (By.CSS_SELECTOR, "#sellerRank .rank-sales")
 
 # ==================== 卖家中心 ====================
 seller_box = (By.ID, "sellerBox")

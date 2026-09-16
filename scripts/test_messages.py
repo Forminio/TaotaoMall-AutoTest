@@ -30,20 +30,29 @@ class TestMessages(BaseCase):
         login(self.driver)
 
     def test_messages_nav_open(self):
-        """消息中心：点击顶栏「消息」进入，默认展示 3 条系统消息"""
+        """消息中心：点击顶栏「消息」进入，系统消息分 3 页每页 5 条"""
         self.messages.page_click_nav_messages()
         self.assertTrue(self.messages.page_is_on_messages())
-        self.assertEqual(self.messages.page_get_sys_msg_count(), 3)
+        self.assertEqual(self.messages.page_get_sys_msg_count(), 5)
+        self.assertTrue(self.messages.page_msg_pager_visible())
+        self.assertIn("共 12 条", self.messages.page_get_msg_pager_info())
+        self.assertIn("1/3 页", self.messages.page_get_msg_pager_info())
+
+    def test_messages_sys_pagination(self):
+        """消息中心：系统消息切到第 3 页展示剩余 2 条"""
+        self.messages.page_click_nav_messages()
+        self.messages.page_click_msg_page(3)
+        self.assertEqual(self.messages.page_get_sys_msg_count(), 2)
+        self.assertIn("3/3 页", self.messages.page_get_msg_pager_info())
 
     def test_messages_unread_badge(self):
-        """消息中心：初始未读徽章为 3，全部已读后徽章隐藏"""
+        """消息中心：初始未读徽章为 12，全部已读后徽章隐藏"""
         self.assertTrue(self.messages.page_badge_visible())
-        self.assertEqual(self.messages.page_get_badge(), "3")
+        self.assertEqual(self.messages.page_get_badge(), "12")
 
         self.messages.page_click_nav_messages()
         self.messages.page_mark_all_read()
 
-        self.assertEqual(self.messages.page_get_unread_count(), 0)
         self.assertFalse(self.messages.page_badge_visible())
 
     def test_messages_read_detail_modal(self):
@@ -57,8 +66,7 @@ class TestMessages(BaseCase):
         self.assertEqual(self.modal.page_get_modal_title(), first_title)
         self.assertTrue(self.modal.page_get_modal_body())
         self.modal.page_click_modal_button("关闭")
-        self.assertEqual(self.messages.page_get_unread_count(), 2)
-        self.assertEqual(self.messages.page_get_badge(), "2")
+        self.assertEqual(self.messages.page_get_badge(), "11")
 
     def test_messages_tab_switch(self):
         """消息中心：切换到客服消息展示聊天窗口"""

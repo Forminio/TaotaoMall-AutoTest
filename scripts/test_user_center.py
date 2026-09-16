@@ -8,6 +8,7 @@ from base.get_driver import GetDriver
 from base.base_case import BaseCase
 from page.page_user import PageUser
 from page.page_address import PageAddress
+from page.page_coupon import PageCoupon
 from common.flows import login
 
 
@@ -19,6 +20,7 @@ class TestUserCenter(BaseCase):
         super().setUpClass()
         cls.user = PageUser(cls.driver)
         cls.address = PageAddress(cls.driver)
+        cls.coupon = PageCoupon(cls.driver)
 
     def setUp(self):
         super().setUp()
@@ -34,10 +36,10 @@ class TestUserCenter(BaseCase):
         self.assertEqual(self.user.page_get_uc_name(), "admin")
 
     def test_user_center_stats(self):
-        """个人中心：初始订单数 0，地址数 2"""
+        """个人中心：初始订单数 0，地址数 8"""
         self._open_user_center()
         self.assertEqual(self.user.page_get_uc_order_count(), "0")
-        self.assertEqual(self.user.page_get_uc_addr_count(), "2")
+        self.assertEqual(self.user.page_get_uc_addr_count(), "8")
 
     def test_user_center_nav_orders(self):
         """个人中心：点击订单统计跳转我的订单"""
@@ -62,6 +64,12 @@ class TestUserCenter(BaseCase):
         self._open_user_center()
         self.user.page_click_uc_manager_address()
         self.assertTrue(self.address.page_is_on_manage())
+
+    def test_user_center_my_coupons(self):
+        """个人中心：菜单「我的优惠券」跳转优惠券页"""
+        self._open_user_center()
+        self.coupon.page_click_uc_my_coupons()
+        self.assertTrue(self.coupon.page_is_on_coupons())
 
     def test_user_center_logout(self):
         """个人中心：退出登录回到未登录态"""

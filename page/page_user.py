@@ -1,3 +1,5 @@
+from selenium.webdriver.common.by import By
+
 from base.base import Base
 import page
 
@@ -13,6 +15,16 @@ class PageUser(Base):
 
     def page_get_order_count(self):
         return len(self.base_finds(page.order_items))
+
+    # ---------- 订单分页 ----------
+    def page_get_orders_pager_info(self):
+        return self.base_text((By.CSS_SELECTOR, "#ordersPager .page-info"))
+
+    def page_get_orders_page_count(self):
+        return len(self.base_finds((By.CSS_SELECTOR, "#ordersPager .page-num")))
+
+    def page_click_orders_page(self, num):
+        self.base_click((By.CSS_SELECTOR, f"#ordersPager .page-num[data-p='{num}']"))
 
     def page_is_orders_empty(self):
         return self.base_is_exist(page.orders_empty)

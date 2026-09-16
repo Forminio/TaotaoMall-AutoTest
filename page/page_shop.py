@@ -1,9 +1,11 @@
+from selenium.webdriver.common.by import By
+
 from base.base import Base
 import page
 
 
 class PageShop(Base):
-    """店铺 / 商家详情页"""
+    """店铺 / 商家详情页 / 卖家中心"""
 
     def page_click_nav_seller_center(self):
         self.base_click(page.nav_seller_center)
@@ -58,3 +60,35 @@ class PageShop(Base):
     def page_click_seller_shop(self, index=0):
         """点击第 index 个商家卡片进入店铺页"""
         self.base_finds(page.seller_shop_cards)[index].click()
+
+    # ---------- 卖家中心：排行榜 / 类型 / 分页 ----------
+    def page_get_rank_count(self):
+        return len(self.base_finds(page.seller_rank_items))
+
+    def page_get_rank_names(self):
+        return [el.text for el in self.base_finds(page.seller_rank_names)]
+
+    def page_get_first_rank_sales(self):
+        return self.base_finds(page.seller_rank_sales)[0].text
+
+    def page_click_rank(self, index=0):
+        self.base_finds(page.seller_rank_items)[index].click()
+
+    def page_get_type_names(self):
+        return [el.text for el in self.base_finds(page.seller_tabs)]
+
+    def page_click_type(self, name):
+        for tab in self.base_finds(page.seller_tabs):
+            if tab.text.strip() == name:
+                tab.click()
+                return
+        raise AssertionError(f"卖家中心未找到分类: {name}")
+
+    def page_get_seller_pager_info(self):
+        return self.base_text((By.CSS_SELECTOR, "#sellerPager .page-info"))
+
+    def page_click_seller_page(self, num):
+        self.base_click((By.CSS_SELECTOR, f"#sellerPager .page-num[data-p='{num}']"))
+
+    def page_seller_pager_visible(self):
+        return self.base_find((By.CSS_SELECTOR, "#sellerPager")).is_displayed()

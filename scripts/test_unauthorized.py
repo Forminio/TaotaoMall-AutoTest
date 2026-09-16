@@ -4,9 +4,6 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from selenium.webdriver.support.wait import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-
 from base.get_driver import GetDriver
 from base.base_case import BaseCase
 from page.page_product import PageProduct
@@ -14,27 +11,19 @@ from page.page_cart import PageCart
 from page.page_user import PageUser
 from page.page_shop import PageShop
 from page.page_messages import PageMessages
+from page.page_modal import PageModal
 from common.flows import login
 from tools.case_doc import case_doc
 from parameterized import parameterized
 import page
 
 
-def assert_toast(driver, expect_text):
-    """等待 toast 提示出现并校验文案"""
-    toast = WebDriverWait(driver, 3, 0.1).until(
-        EC.presence_of_element_located(page.toast))
-    assert toast.text == expect_text, f"toast 文案不符: {toast.text}"
-
-
-NAV_BLOCK_CASES = [
-    ("nav_cart", lambda d: PageCart(d).page_click_nav_cart()),
-    ("nav_orders", lambda d: PageUser(d).page_click_nav_orders()),
-    ("nav_user_center", lambda d: PageUser(d).page_click_nav_user_center()),
-    ("nav_seller_center", lambda d: PageShop(d).page_click_nav_seller_center()),
-    ("nav_messages", lambda d: PageMessages(d).page_click_nav_messages()),
-    ("nav_customer_service", lambda d: PageMessages(d).page_click_nav_customer_service()),
-]
+def assert_login_alert(driver, expect_text="请先登录"):
+    """未登录拦截：断言弹出 div 提示弹窗且文案正确，并关闭弹窗"""
+    modal = PageModal(driver)
+    assert modal.page_modal_is_open(), "应弹出「请先登录」提示弹窗"
+    assert expect_text in modal.page_get_modal_body(), "弹窗文案不符"
+    modal.page_click_modal_button("确定")
 
 
 class TestUnauthorized(BaseCase):
@@ -49,11 +38,25 @@ class TestUnauthorized(BaseCase):
     def setUp(self):
         super().setUp()
 
-    @parameterized.expand(NAV_BLOCK_CASES, doc_func=case_doc)
-    def test_nav_blocked_without_login(self, name, action):
-        """未登录拦截：点击各功能入口弹出「请先登录」"""
-        action(self.driver)
-        assert_toast(self.driver, "请先登录")
+    @parameterized.expand([
+        ("nav_cart",), ("nav_orders",), ("nav_user_center",),
+        ("nav_seller_center",), ("nav_messages",), ("nav_customer_service",),
+        ("nav_coupons",), ("nav_address",),
+    ], doc_func=case_doc)
+    def test_nav_blocked_without_login(self, name):
+        """未登录拦截：点击各功能入口弹出「请先登录」弹窗"""
+        actions = {
+            "nav_cart": lambda: PageCart(self.driver).page_click_nav_cart(),
+            "nav_orders": lambda: PageUser(self.driver).page_click_nav_orders(),
+            "nav_user_center": lambda: PageUser(self.driver).page_click_nav_user_center(),
+            "nav_seller_center": lambda: PageShop(self.driver).page_click_nav_seller_center(),
+            "nav_messages": lambda: PageMessages(self.driver).page_click_nav_messages(),
+            "nav_customer_service": lambda: PageMessages(self.driver).page_click_nav_customer_service(),
+            "nav_coupons": lambda: self.driver.find_element(*page.nav_coupons).click(),
+            "nav_address": lambda: self.driver.find_element(*page.nav_address).click(),
+        }
+        actions[name]()
+        assert_login_alert(self.driver)
         self.assertEqual(self.user.page_get_user_info(), "未登录")
 
     def test_browse_products_without_login(self):
@@ -65,7 +68,7 @@ class TestUnauthorized(BaseCase):
         """未登录拦截：点击加入购物车弹出「请先登录」"""
         self.product.page_click_category("all")
         self.product.page_add_cart(0)
-        assert_toast(self.driver, "请先登录")
+        assert_login_alert(self.driver)
         self.assertEqual(self.user.page_get_user_info(), "未登录")
 
     def test_buy_now_blocked_without_login(self):
@@ -73,7 +76,7 @@ class TestUnauthorized(BaseCase):
         self.product.page_click_category("all")
         self.product.page_click_product(0)
         self.driver.find_element(*page.detail_buy_now).click()
-        assert_toast(self.driver, "请先登录")
+        assert_login_alert(self.driver)
 
 
 class TestRegisterLinkLifecycle(BaseCase):

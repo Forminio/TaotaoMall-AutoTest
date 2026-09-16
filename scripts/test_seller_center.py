@@ -25,42 +25,62 @@ class TestSellerCenter(BaseCase):
     def setUp(self):
         super().setUp()
         login(self.driver)
-
-    def _open_seller_center(self):
         self.shop.page_click_nav_seller_center()
-        self.assertTrue(self.shop.page_is_on_seller())
 
-    def test_seller_center_lists_all_shops(self):
-        """卖家中心：罗列全部 10 家商家"""
-        self._open_seller_center()
-        self.assertEqual(self.shop.page_get_seller_count(), 10)
+    def test_seller_center_pagination(self):
+        """卖家中心：10 家商家分 2 页，首页 6 家"""
+        self.assertTrue(self.shop.page_is_on_seller())
+        self.assertEqual(self.shop.page_get_seller_count(), 6)
         self.assertIn("共 10 家店铺", self.shop.page_get_seller_title())
+        self.assertTrue(self.shop.page_seller_pager_visible())
+        self.assertIn("共 10 条", self.shop.page_get_seller_pager_info())
+        self.assertIn("1/2 页", self.shop.page_get_seller_pager_info())
+
+    def test_seller_center_page2(self):
+        """卖家中心：第二页展示剩余 4 家，末位为生活优选超市"""
+        self.shop.page_click_seller_page(2)
+        self.assertEqual(self.shop.page_get_seller_count(), 4)
+        names = self.shop.page_get_seller_names()
+        self.assertEqual(names[0], "戴尔旗舰店")
+        self.assertEqual(names[-1], "淘淘生活优选超市")
 
     def test_seller_center_shop_order(self):
-        """卖家中心：商家按序展示，首位 Apple 末位生活超市"""
-        self._open_seller_center()
+        """卖家中心：首页商家按序展示，首位 Apple 末位索尼"""
         names = self.shop.page_get_seller_names()
         self.assertEqual(names[0], "Apple官方旗舰店")
-        self.assertEqual(names[-1], "淘淘生活优选超市")
+        self.assertEqual(names[-1], "索尼官方旗舰店")
+
+    def test_seller_center_rank(self):
+        """卖家中心：排行榜展示销量 Top5，榜首为生活优选超市"""
+        self.assertEqual(self.shop.page_get_rank_count(), 5)
+        rank_names = self.shop.page_get_rank_names()
+        self.assertEqual(rank_names[0], "淘淘生活优选超市")
+        self.assertIn("3,200,000", self.shop.page_get_first_rank_sales())
+
+    def test_seller_center_rank_enter_shop(self):
+        """卖家中心：点击排行榜商家进入对应店铺"""
+        self.shop.page_click_rank(0)
+        self.assertTrue(self.shop.page_is_on_shop())
+        self.assertEqual(self.shop.page_get_shop_name(), "淘淘生活优选超市")
+
+    def test_seller_center_type_filter(self):
+        """卖家中心：按类型筛选，手机数码 4 家、综合超市 1 家"""
+        self.shop.page_click_type("手机数码")
+        self.assertEqual(self.shop.page_get_seller_count(), 4)
+        self.assertFalse(self.shop.page_seller_pager_visible())
+
+        self.shop.page_click_type("综合超市")
+        self.assertEqual(self.shop.page_get_seller_count(), 1)
 
     def test_seller_center_enter_shop(self):
         """卖家中心：点击商家卡片进入对应店铺页"""
-        self._open_seller_center()
         self.shop.page_click_seller_shop(0)
         self.assertTrue(self.shop.page_is_on_shop())
         self.assertEqual(self.shop.page_get_shop_name(), "Apple官方旗舰店")
         self.assertGreaterEqual(self.shop.page_get_shop_product_count(), 1)
 
-    def test_seller_center_enter_last_shop(self):
-        """卖家中心：点击最后一个商家进入淘淘生活优选超市"""
-        self._open_seller_center()
-        self.shop.page_click_seller_shop(9)
-        self.assertTrue(self.shop.page_is_on_shop())
-        self.assertEqual(self.shop.page_get_shop_name(), "淘淘生活优选超市")
-
     def test_seller_center_back(self):
         """卖家中心：返回按钮回到商品列表"""
-        self._open_seller_center()
         self.shop.page_click_seller_back()
         self.assertFalse(self.shop.page_is_on_seller())
         self.assertEqual(self.product.page_get_product_title(), "热门推荐")

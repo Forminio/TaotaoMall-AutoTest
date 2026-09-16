@@ -22,6 +22,8 @@ from scripts.test_seller_center import TestSellerCenter, TestSellerCenterReverse
 from scripts.test_messages import TestMessages, TestMessagesReverse
 from scripts.test_info_modals import TestFooterLink, TestAgreement
 from scripts.test_unauthorized import TestUnauthorized, TestRegisterLinkLifecycle
+from scripts.test_banner import TestBanner
+from scripts.test_coupon_my import TestMyCoupons, TestMyCouponsReverse
 
 from XTestRunner import HTMLTestRunner
 from base.get_driver import GetDriver
@@ -40,7 +42,8 @@ def main():
                 TestShop, TestShopReverse, TestUserCenter, TestUserCenterReverse,
                 TestAddressManage, TestPagination,
                 TestSellerCenter, TestSellerCenterReverse, TestMessages, TestMessagesReverse,
-                TestFooterLink, TestAgreement, TestUnauthorized, TestRegisterLinkLifecycle]:
+                TestFooterLink, TestAgreement, TestUnauthorized, TestRegisterLinkLifecycle,
+                TestBanner, TestMyCoupons, TestMyCouponsReverse]:
         suite.addTest(loader.loadTestsFromTestCase(cls))
 
     with open(report_path, "wb") as fp:

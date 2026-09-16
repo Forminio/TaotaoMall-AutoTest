@@ -1,3 +1,5 @@
+from selenium.webdriver.common.by import By
+
 from base.base import Base
 import page
 
@@ -37,3 +39,13 @@ class PageCart(Base):
 
     def page_is_cart_empty(self):
         return self.base_is_exist(page.cart_empty)
+
+    # ---------- 购物车分页 ----------
+    def page_get_row_count(self):
+        return len(self.base_finds(page.cart_rows))
+
+    def page_get_pager_info(self):
+        return self.base_text((By.CSS_SELECTOR, "#cartPager .page-info"))
+
+    def page_click_pager_page(self, num):
+        self.base_click((By.CSS_SELECTOR, f"#cartPager .page-num[data-p='{num}']"))

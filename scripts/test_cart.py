@@ -66,6 +66,19 @@ class TestCart(BaseCase):
         self.cart.page_click_clear()
         self.assertTrue(self.cart.page_is_cart_empty())
 
+    def test_cart_pagination(self):
+        """购物车分页：加购 6 种商品分 2 页，第 2 页 1 行"""
+        for index in range(6):
+            self.product.page_add_cart(index)
+
+        self.cart.page_click_nav_cart()
+        self.assertEqual(self.cart.page_get_row_count(), 5)
+        self.assertIn("共 6 条", self.cart.page_get_pager_info())
+        self.assertIn("1/2 页", self.cart.page_get_pager_info())
+
+        self.cart.page_click_pager_page(2)
+        self.assertEqual(self.cart.page_get_row_count(), 1)
+
 
 def tearDownModule():
     GetDriver().quit_driver()

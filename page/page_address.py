@@ -65,6 +65,13 @@ class PageAddress(Base):
         items = self.base_finds(page.addr_items)
         return "default" in (items[0].get_attribute("class") or "").split()
 
+    # ---------- 地址分页 ----------
+    def page_get_addr_pager_info(self):
+        return self.base_text((By.CSS_SELECTOR, "#addrPager .page-info"))
+
+    def page_click_addr_page(self, num):
+        self.base_click((By.CSS_SELECTOR, f"#addrPager .page-num[data-p='{num}']"))
+
     # ---------- modal 弹窗 ----------
     def page_modal_is_open(self):
         return self.base_find(page.modal_overlay).is_displayed()

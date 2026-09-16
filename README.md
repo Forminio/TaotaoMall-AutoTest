@@ -1,8 +1,8 @@
 # 淘淘商城 Web 自动化测试
 
-给「淘淘商城」这个本地 Demo（`demo/淘淘商城.html`）写的一套 UI 自动化，用 Selenium + unittest 把注册、登录、商品搜索、分页、详情、购物车、优惠券、下单、订单查询、商家店铺、消息中心、收货地址管理这条电商链路整个跑了一遍。数据从 JSON 读，用例之间互不依赖，最后用 XTestRunner 出一份带失败截图的 HTML 报告。
+给「淘淘商城」这个本地 Demo（`demo/淘淘商城.html`）写的一套 UI 自动化，用 Selenium + unittest 把注册、登录、商品搜索（含商家搜索）、分页、详情、购物车、优惠券、下单、订单查询、商家店铺、卖家中心（排行榜/类型/分页）、消息中心（系统/客服）、广告轮播、收货地址管理这条电商链路整个跑了一遍。数据从 JSON 读，用例之间互不依赖，最后用 XTestRunner 出一份带失败截图的 HTML 报告。
 
-被测页面是单文件的 JS 状态机（40 个商品、10 家店铺、地址/消息/订单全部在内存里流转），不依赖后端，克隆下来就能跑。
+被测页面是单文件的 JS 状态机（40 个商品、10 家店铺，购物车/订单/地址/消息/优惠券全部在内存里流转，所有列表带分页），不依赖后端，克隆下来就能跑。
 
 ## 环境
 
@@ -195,7 +195,7 @@ def checkout(driver, index=0):
     PageCart(driver).page_click_checkout()
 ```
 
-页面对象同样在收敛公共行为：`PageModal` 一套弹窗操作同时服务地址编辑、消息详情、协议条款、页脚信息四类场景；`PageAddress` 里「默认地址排序、设为默认、删除二次确认」这类状态流转对用例层只暴露成一行调用；未登录拦截的反向用例统一依赖一个 `assert_toast` 断言「请先登录」提示，而不是各自去等元素。
+页面对象同样在收敛公共行为：`PageModal` 一套弹窗操作同时服务地址编辑、消息详情、协议条款、页脚信息、登录异常提示五类场景；`PageAddress` 里「默认地址排序、设为默认、删除二次确认」这类状态流转对用例层只暴露成一行调用。
 
 被遮挡点不动的元素，再兜底用 JS 强点一下，避免 `ElementNotInteractableException` 硬砸出来：
 
@@ -205,27 +205,42 @@ def base_js_click(self, loc):
     self.driver.execute_script("arguments[0].click();", el)
 ```
 
+### 7. 渲染层的两处复用：一套分页组件，一种提示弹窗
+
+列表类页面（商品、购物车、订单、收货地址、系统消息、客服消息、优惠券、卖家中心）在 Demo 里不是各自写一套分页，而是共用 `renderPager(container, total, totalPage, current, onPage)`：渲染纯页码条，翻页行为用回调交还给各页面的渲染函数。这样测试端只需要按 `id` 定位分页容器，断言「共 N 条 · x/y 页」的语义在所有页面保持一致：
+
+```python
+def page_get_pager_info(self):
+    return self.base_text((By.CSS_SELECTOR, "#cartPager .page-info"))
+```
+
+分页条还遵循两条边界约定：总页数小于等于 1 时整条隐藏（避免空分页条被误判为功能异常）；当前页超出总页数时自动钳制到末页（列表删空后翻页不越界）。这两条约定直接被写成正向/反向用例。
+
+提示弹窗同理。登录校验失败、注册校验失败、未登录拦截原来散在各处的 toast 文案，统一收敛成一个 `showAlert(msg)` 的 div 弹窗（标题「提示」+ 确定按钮），与协议弹窗、信息页弹窗共用 `openModal` 组件。测试端只依赖一个断言函数 `assert_login_alert(driver)`，无论从哪个入口触达，校验的都是一套 DOM 结构；原生 `confirm()`（清空购物车）则保留，作为「原生弹窗走 `EC.alert_is_present()`、自定义弹窗走可见性」两条处理路径的对照。
+
 ## 测试覆盖
 
 | 模块 | 文件 | 说明 |
 | --- | --- | --- |
-| 登录 | test_login.py | 正确 / 错误凭证、多组校验、退出登录 |
-| 注册 | test_register.py | 表单校验、注册成功自动登录 |
-| 商品 | test_product.py | 十大分类命中数量、关键词搜索、无结果场景 |
+| 登录 | test_login.py | 正确 / 错误凭证、失败弹窗提示、退出登录 |
+| 注册 | test_register.py | 表单校验弹窗、注册成功自动登录 |
+| 商品 | test_product.py | 十大分类命中数量、关键词搜索、搜索商家、无结果场景 |
 | 分页 | test_pagination.py | 页码切换、首页 / 末页数量、上一页下一页、单页分类 |
 | 详情 | test_detail.py | 名称 / 价格 / 库存、店铺入口 |
-| 购物车 | test_cart.py | 加购、数量增减、删除、清空、合计 |
+| 购物车 | test_cart.py | 加购、数量增减、删除、清空、合计、列表分页 |
 | 地址 | test_address.py | 结算页收货信息表单校验 |
-| 地址管理 | test_address_manage.py | 新增 / 编辑 / 删除、默认地址排序、弹窗二次确认 |
-| 优惠券 | test_coupon.py | 满减券折后金额、未达门槛不打折 |
+| 地址管理 | test_address_manage.py | 新增 / 编辑 / 删除、默认地址排序、弹窗二次确认、分页 |
+| 优惠券 | test_coupon.py | 结算页满减券折后金额、未达门槛不打折 |
+| 我的优惠券 | test_coupon_my.py | 券列表分页、已过期 / 已使用状态、去使用、未登录拦截 |
 | 下单 | test_order.py | 完整下单流 + 动态金额校验 |
-| 订单 | test_user.py | 空订单、下单后查询订单 |
+| 订单 | test_user.py | 空订单、下单后查询、订单列表分页 |
 | 店铺 | test_shop.py | 店铺详情、商品进店、返回首页、未登录拦截 |
-| 卖家中心 | test_seller_center.py | 全部商家罗列、进入店铺、未登录拦截 |
-| 个人中心 | test_user_center.py | 用户信息、订单 / 地址入口、退出登录 |
-| 消息中心 | test_messages.py | 系统消息、未读徽章、已读状态、客服自动回复 |
+| 卖家中心 | test_seller_center.py | 商家分页、类型筛选、销量排行榜、进店、未登录拦截 |
+| 个人中心 | test_user_center.py | 用户信息、订单 / 地址 / 优惠券入口、退出登录 |
+| 消息中心 | test_messages.py | 系统消息分页、未读徽章、已读弹窗、客服自动回复 |
+| 广告轮播 | test_banner.py | 自动轮播、圆点切换、关闭广告 |
 | 信息页与协议 | test_info_modals.py | 页脚五个链接、用户协议 / 隐私政策弹窗 |
-| 未登录权限 | test_unauthorized.py | 六大入口拦截、加购 / 立即购买拦截、注册入口生命周期 |
+| 未登录权限 | test_unauthorized.py | 八大入口拦截弹窗、加购 / 立即购买拦截、注册入口生命周期 |
 
 ## 运行结果
 

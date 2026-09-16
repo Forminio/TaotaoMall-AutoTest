@@ -1,3 +1,5 @@
+from selenium.webdriver.common.by import By
+
 from base.base import Base
 import page
 
@@ -54,6 +56,16 @@ class PageMessages(Base):
     def page_cs_send(self, text):
         self.base_input(page.cs_input, text)
         self.base_click(page.cs_send_btn)
+
+    # ---------- 消息分页 ----------
+    def page_get_msg_pager_info(self):
+        return self.base_text((By.CSS_SELECTOR, "#msgPager .page-info"))
+
+    def page_click_msg_page(self, num):
+        self.base_click((By.CSS_SELECTOR, f"#msgPager .page-num[data-p='{num}']"))
+
+    def page_msg_pager_visible(self):
+        return self.base_find((By.CSS_SELECTOR, "#msgPager")).is_displayed()
 
     def page_click_back(self):
         self.base_click(page.messages_back_btn)
