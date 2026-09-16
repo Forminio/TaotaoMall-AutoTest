@@ -103,3 +103,97 @@ logo_btn = (By.ID, "logoBtn")
 
 # ==================== 顶部导航 ====================
 top_user_info = (By.ID, "userInfo")
+nav_user_center = (By.ID, "navUserCenter")
+nav_seller_center = (By.ID, "navSellerCenter")
+nav_messages = (By.ID, "navMessages")
+nav_customer_service = (By.ID, "navCustomerService")
+
+# ==================== 卖家中心 ====================
+seller_box = (By.ID, "sellerBox")
+seller_title = (By.ID, "sellerTitle")
+shop_list = (By.ID, "shopList")
+seller_shop_cards = (By.CSS_SELECTOR, "#shopList .shop-card")
+seller_shop_names = (By.CSS_SELECTOR, "#shopList .sc-name")
+seller_back_btn = (By.ID, "sellerBackBtn")
+
+# ==================== 消息中心 ====================
+messages_box = (By.ID, "messagesBox")
+msg_badge = (By.ID, "msgBadge")
+msg_tab_system = (By.ID, "msgTabSystem")
+msg_tab_service = (By.ID, "msgTabService")
+msg_tab_content = (By.ID, "msgTabContent")
+sys_msg_items = (By.CSS_SELECTOR, "#msgTabContent .sys-msg-item")
+sys_msg_unread = (By.CSS_SELECTOR, "#msgTabContent .sys-msg-item.unread")
+sys_msg_titles = (By.CSS_SELECTOR, "#msgTabContent .sys-msg-title")
+mark_all_read_btn = (By.ID, "markAllReadBtn")
+cs_msgs = (By.CSS_SELECTOR, "#msgTabContent .cs-msg")
+cs_bubbles = (By.CSS_SELECTOR, "#msgTabContent .cs-msg .bubble")
+cs_input = (By.ID, "csInput")
+cs_send_btn = (By.ID, "csSendBtn")
+messages_back_btn = (By.ID, "messagesBackBtn")
+
+# ==================== 页脚 / 协议 ====================
+foot_links = (By.CSS_SELECTOR, ".foot-link")
+login_agreement_link = (By.ID, "loginAgreementLink")
+login_privacy_link = (By.ID, "loginPrivacyLink")
+reg_agreement_link = (By.ID, "regAgreementLink")
+reg_privacy_link = (By.ID, "regPrivacyLink")
+
+# ==================== toast 提示 ====================
+toast = (By.CSS_SELECTOR, ".toast")
+
+# ==================== 商品分页 ====================
+pagination = (By.ID, "pagination")
+pagination_info = (By.CSS_SELECTOR, "#pagination .page-info")
+pagination_page_nums = (By.CSS_SELECTOR, "#pagination .page-num")
+pagination_active_page = (By.CSS_SELECTOR, "#pagination .page-num.active")
+
+# ==================== 详情页店铺信息 ====================
+detail_shop_logo = (By.ID, "detailShopLogo")
+detail_shop_name = (By.ID, "detailShopName")
+detail_shop_stats = (By.ID, "detailShopStats")
+detail_shop_link = (By.ID, "detailShopLink")
+
+# ==================== 店铺页 ====================
+shop_box = (By.ID, "shopBox")
+shop_back_btn = (By.ID, "shopBackBtn")
+shop_logo = (By.ID, "shopLogo")
+shop_name = (By.ID, "shopName")
+shop_stats = (By.ID, "shopStats")
+shop_desc = (By.ID, "shopDesc")
+shop_product_title = (By.ID, "shopProductTitle")
+shop_products = (By.ID, "shopProducts")
+shop_product_cards = (By.CSS_SELECTOR, "#shopProducts .product-card")
+
+# ==================== 个人中心 ====================
+user_center_box = (By.ID, "userCenterBox")
+uc_name = (By.ID, "ucName")
+uc_phone = (By.ID, "ucPhone")
+uc_order_count = (By.ID, "ucOrderCount")
+uc_addr_count = (By.ID, "ucAddrCount")
+uc_nav_orders = (By.ID, "ucNavOrders")
+uc_nav_address = (By.ID, "ucNavAddress")
+uc_manager_address = (By.ID, "ucManagerAddress")
+uc_my_orders = (By.ID, "ucMyOrders")
+uc_logout = (By.ID, "ucLogout")
+
+# ==================== 地址管理 ====================
+address_manage_box = (By.ID, "addressManageBox")
+addr_list = (By.ID, "addrList")
+addr_add_btn = (By.ID, "addrAddBtn")
+addr_back_btn = (By.ID, "addrBackBtn")
+addr_items = (By.CSS_SELECTOR, "#addrList .addr-item")
+addr_default_items = (By.CSS_SELECTOR, "#addrList .addr-item.default")
+addr_names = (By.CSS_SELECTOR, "#addrList .addr-name-text")
+addr_phones = (By.CSS_SELECTOR, "#addrList .addr-phone")
+addr_details = (By.CSS_SELECTOR, "#addrList .addr-detail")
+
+# ==================== modal 弹窗 ====================
+modal_overlay = (By.ID, "modalOverlay")
+modal_title = (By.ID, "modalTitle")
+modal_body = (By.ID, "modalBody")
+modal_footer = (By.ID, "modalFooter")
+modal_buttons = (By.CSS_SELECTOR, "#modalFooter button")
+m_addr_name = (By.ID, "mAddrName")
+m_addr_phone = (By.ID, "mAddrPhone")
+m_addr_detail = (By.ID, "mAddrDetail")

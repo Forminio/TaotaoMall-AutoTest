@@ -45,3 +45,31 @@ class PageProduct(Base):
     def page_search(self, keyword):
         self.page_input_search(keyword)
         self.page_click_search()
+
+    # ---------- 分页 ----------
+    def page_get_page_info(self):
+        return self.base_text(page.pagination_info)
+
+    def page_get_active_page(self):
+        return self.base_text(page.pagination_active_page)
+
+    def page_get_page_num_count(self):
+        return len(self.base_finds(page.pagination_page_nums))
+
+    def page_click_page(self, num):
+        """点击指定页码（页码文本）"""
+        self.base_click((By.CSS_SELECTOR, f"#pagination .page-num[data-page='{num}']"))
+
+    def page_click_next_page(self):
+        """点击「下一页」按钮（按文本定位）"""
+        for btn in self.base_finds((By.CSS_SELECTOR, "#pagination button")):
+            if btn.text.strip() == "下一页":
+                btn.click()
+                return
+
+    def page_click_prev_page(self):
+        """点击「上一页」按钮（按文本定位）"""
+        for btn in self.base_finds((By.CSS_SELECTOR, "#pagination button")):
+            if btn.text.strip() == "上一页":
+                btn.click()
+                return

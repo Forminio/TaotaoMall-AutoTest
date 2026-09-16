@@ -14,6 +14,14 @@ from scripts.test_order import TestOrder
 from scripts.test_user import TestUser
 from scripts.test_register import TestRegister
 from scripts.test_coupon import TestCoupon
+from scripts.test_shop import TestShop, TestShopReverse
+from scripts.test_user_center import TestUserCenter, TestUserCenterReverse
+from scripts.test_address_manage import TestAddressManage
+from scripts.test_pagination import TestPagination
+from scripts.test_seller_center import TestSellerCenter, TestSellerCenterReverse
+from scripts.test_messages import TestMessages, TestMessagesReverse
+from scripts.test_info_modals import TestFooterLink, TestAgreement
+from scripts.test_unauthorized import TestUnauthorized, TestRegisterLinkLifecycle
 
 from XTestRunner import HTMLTestRunner
 from base.get_driver import GetDriver
@@ -28,7 +36,11 @@ def main():
     suite = unittest.TestSuite()
 
     for cls in [TestLogin, TestRegister, TestProduct, TestDetail, TestCart,
-                TestAddress, TestOrder, TestCoupon, TestUser]:
+                TestAddress, TestOrder, TestCoupon, TestUser,
+                TestShop, TestShopReverse, TestUserCenter, TestUserCenterReverse,
+                TestAddressManage, TestPagination,
+                TestSellerCenter, TestSellerCenterReverse, TestMessages, TestMessagesReverse,
+                TestFooterLink, TestAgreement, TestUnauthorized, TestRegisterLinkLifecycle]:
         suite.addTest(loader.loadTestsFromTestCase(cls))
 
     with open(report_path, "wb") as fp:

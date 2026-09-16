@@ -1,0 +1,6 @@
+[
+  {"question": "什么时候发货", "expect_reply": "48 小时"},
+  {"question": "我要退款", "expect_reply": "7 天无理由"},
+  {"question": "有优惠券吗", "expect_reply": "满 5000 减 500"},
+  {"question": "在吗", "expect_reply": "人工客服"}
+]

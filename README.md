@@ -1,8 +1,8 @@
 # 淘淘商城 Web 自动化测试
 
-给「淘淘商城」这个本地 Demo（`demo/淘淘商城.html`）写的一套 UI 自动化，用 Selenium + unittest 把注册、登录、商品搜索、详情、购物车、优惠券、下单、订单查询这条电商链路整个跑了一遍。数据从 JSON 读，用例之间互不依赖，最后用 XTestRunner 出一份带失败截图的 HTML 报告。
+给「淘淘商城」这个本地 Demo（`demo/淘淘商城.html`）写的一套 UI 自动化，用 Selenium + unittest 把注册、登录、商品搜索、分页、详情、购物车、优惠券、下单、订单查询、商家店铺、消息中心、收货地址管理这条电商链路整个跑了一遍。数据从 JSON 读，用例之间互不依赖，最后用 XTestRunner 出一份带失败截图的 HTML 报告。
 
-被测页面是纯前端 HTML，不依赖后端，克隆下来就能跑。
+被测页面是单文件的 JS 状态机（40 个商品、10 家店铺、地址/消息/订单全部在内存里流转），不依赖后端，克隆下来就能跑。
 
 ## 环境
 
@@ -91,33 +91,46 @@ class GetDriver:
 
 配合 `main.py` 在全部用例跑完后统一调一次 `quit_driver()`，一整轮测试 Chrome 起停各一次。
 
-### 2. 数据驱动，键名对齐形参
+### 2. 显式等待的三种形态
 
-如果按位置传参，时间一长很容易把 `password` 塞进 `username`。这里让 JSON 里的键名直接跟测试方法的形参名对上，用 `parameterized` 展开成命名参数：
+这个框架里禁用了隐式等待，所有定位都走 `WebDriverWait`，但不同场景用的等待形态不一样——这是踩了几轮坑之后才定下来的：
 
-```python
-def get_data(filename):
-    data = read_json(DATA_DIR / f"{filename}.json")
-    return [param.explicit(kwargs=item) for item in data]
-```
-
-```json
-[
-  { "username": "admin", "password": "123456", "captcha": "8888", "expect_msg": "",         "success": true  },
-  { "username": "admin", "password": "wrong",  "captcha": "8888", "expect_msg": "验证码错误", "success": false }
-]
-```
+**单个元素走 lambda，不堆 expected_conditions。** `EC` 链式条件写起来啰嗦，而单元素场景一个「元素出现在 DOM」的 lambda 就够，还能直接复用下标、属性这些原生操作：
 
 ```python
-@parameterized.expand(get_data("login"), doc_func=case_doc)
-def test_login(self, username, password, captcha, expect_msg, success):
-    """登录功能：正确凭证登录成功，错误凭证给出对应提示"""
-    ...
+def base_find(self, loc, timeout=10, poll=0.5):
+    return WebDriverWait(self.driver, timeout, poll_frequency=poll).until(
+        lambda d: d.find_element(*loc)
+    )
 ```
 
-加一条用例就是往 JSON 里加一行，测试代码不用动。`case_doc` 会去掉 parameterized 默认拼在后面的那串参数，让报告里的「描述」列只显示中文说明。
+**alert 必须走 EC，lambda 抓不到。** 清空购物车用的是原生 `confirm()`，它不渲染成 DOM 节点，`find_element` 永远等不到。这类窗口要单独用 `EC.alert_is_present()` 接住再 `accept()`。
 
-### 3. 金额断言不写死
+**列表等「第一个」，不等「全部」。** 前端是同步渲染，列表每次都是整块 `innerHTML` 原子替换，等到第一个元素出现，基本意味着整轮渲染已经完成：
+
+```python
+def base_finds(self, loc, timeout=30, poll=0.5):
+    WebDriverWait(self.driver, timeout, poll_frequency=poll).until(
+        lambda d: len(d.find_elements(*loc)) > 0
+    )
+    return self.driver.find_elements(*loc)
+```
+
+反过来，如果写成「等到元素数量等于 N」，渲染中间态就会误判超时。这套语义还有一个反向约束：**允许为 0 的元素不能走 `base_finds`**。消息中心的未读数在全部已读后就是 0，走 `base_finds` 会空等 30 秒——这类计数直接 `find_elements` 同步统计：
+
+```python
+def page_get_unread_count(self):
+    """未读数可能为 0，不能走 base_finds（其等待至少出现一个元素），直接同步统计"""
+    return len(self.driver.find_elements(*page.sys_msg_unread))
+```
+
+### 3. 失败自动取证
+
+用例失败时不用在每个方法里手写 `try/except` 截图。报告环节会检测到失败用例持有的 WebDriver，把失败瞬间的页面自动截成 base64 内嵌进 HTML 报告——无头模式下同样生效，所以 CI 里跑挂了也能拿到现场。
+
+排障顺序就变成：先看报告里的截图确认页面状态，再对照堆栈定位是断言错了还是页面渲染错了，大部分问题第一眼就能定位。
+
+### 4. 金额断言不写死
 
 价格一旦硬编码，前端一改价测试就「假绿」。所以期望值都是运行时从页面读出来再算，跟前端 `formatPrice` 用同一套千分位规则：
 
@@ -138,7 +151,7 @@ def test_order(self, receiver, phone, address, remark, index):
     self.assertIn(format_price(unit), self.order.page_get_order_amount())
 ```
 
-优惠券也抽成了一张规则表，测试端照着门槛和减免复算一遍应付金额再断言：
+优惠券也抽成了一张规则表，测试端照着门槛和减免复算一遍应付金额再断言，页面的 `COUPONS` 和测试的 `COUPON_RULES` 必须同源维护，一边改了另一边跑不过，防止规则漂移：
 
 ```python
 COUPON_RULES = {"n": (0, 0), "a": (5000, 500), "b": (3000, 200), "c": (1000, 50)}
@@ -151,7 +164,21 @@ def test_coupon(self, index, coupon):
     self.assertIn(format_price(payable), self.order.page_get_order_amount())
 ```
 
-### 4. 高频流程抽出来复用
+### 5. 用例之间隔离
+
+因为被测页面是单文件的 JS 状态机，购物车、登录态、未读消息都放在内存里，前一条用例很容易污染后一条。处理方式是在每个用例的 `setUp` 里重载页面，把 JS 状态整体清零：
+
+```python
+class BaseCase(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.driver = GetDriver().get_driver()   # 复用同一个浏览器
+
+    def setUp(self):
+        self.driver.get(GetDriver().get_url())   # 每次重载，重置 JS 状态
+```
+
+### 6. 分层职责与流程复用
 
 登录、加购结算在好几条用例里反复出现，抽成函数放 `common/flows.py`，用例里两行就能进到结算页：
 
@@ -168,34 +195,14 @@ def checkout(driver, index=0):
     PageCart(driver).page_click_checkout()
 ```
 
-### 5. 用例之间隔离
+页面对象同样在收敛公共行为：`PageModal` 一套弹窗操作同时服务地址编辑、消息详情、协议条款、页脚信息四类场景；`PageAddress` 里「默认地址排序、设为默认、删除二次确认」这类状态流转对用例层只暴露成一行调用；未登录拦截的反向用例统一依赖一个 `assert_toast` 断言「请先登录」提示，而不是各自去等元素。
 
-因为被测页面是单文件的 JS 状态机，购物车、登录态都放在内存里，前一条用例很容易污染后一条。处理方式是在每个用例的 `setUp` 里重载页面，把 JS 状态整体清零：
-
-```python
-class BaseCase(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.driver = GetDriver().get_driver()   # 复用同一个浏览器
-
-    def setUp(self):
-        self.driver.get(GetDriver().get_url())   # 每次重载，重置 JS 状态
-```
-
-### 6. 元素操作统一封装
-
-避开脆弱的 `time.sleep`，查找统一走 Selenium 的显式等待；个别被遮挡点不动的元素，再兜底用 JS 强点一下：
+被遮挡点不动的元素，再兜底用 JS 强点一下，避免 `ElementNotInteractableException` 硬砸出来：
 
 ```python
-class Base:
-    def base_find(self, loc, timeout=10, poll=0.5):
-        return WebDriverWait(self.driver, timeout, poll_frequency=poll).until(
-            lambda d: d.find_element(*loc)
-        )
-
-    def base_js_click(self, loc):
-        el = self.base_find(loc)
-        self.driver.execute_script("arguments[0].click();", el)
+def base_js_click(self, loc):
+    el = self.base_find(loc)
+    self.driver.execute_script("arguments[0].click();", el)
 ```
 
 ## 测试覆盖
@@ -204,13 +211,21 @@ class Base:
 | --- | --- | --- |
 | 登录 | test_login.py | 正确 / 错误凭证、多组校验、退出登录 |
 | 注册 | test_register.py | 表单校验、注册成功自动登录 |
-| 商品 | test_product.py | 搜索、分类、无结果场景 |
-| 详情 | test_detail.py | 名称 / 价格 / 库存 |
+| 商品 | test_product.py | 十大分类命中数量、关键词搜索、无结果场景 |
+| 分页 | test_pagination.py | 页码切换、首页 / 末页数量、上一页下一页、单页分类 |
+| 详情 | test_detail.py | 名称 / 价格 / 库存、店铺入口 |
 | 购物车 | test_cart.py | 加购、数量增减、删除、清空、合计 |
-| 地址 | test_address.py | 收货信息表单校验 |
+| 地址 | test_address.py | 结算页收货信息表单校验 |
+| 地址管理 | test_address_manage.py | 新增 / 编辑 / 删除、默认地址排序、弹窗二次确认 |
 | 优惠券 | test_coupon.py | 满减券折后金额、未达门槛不打折 |
 | 下单 | test_order.py | 完整下单流 + 动态金额校验 |
-| 个人中心 | test_user.py | 登录态、订单列表 |
+| 订单 | test_user.py | 空订单、下单后查询订单 |
+| 店铺 | test_shop.py | 店铺详情、商品进店、返回首页、未登录拦截 |
+| 卖家中心 | test_seller_center.py | 全部商家罗列、进入店铺、未登录拦截 |
+| 个人中心 | test_user_center.py | 用户信息、订单 / 地址入口、退出登录 |
+| 消息中心 | test_messages.py | 系统消息、未读徽章、已读状态、客服自动回复 |
+| 信息页与协议 | test_info_modals.py | 页脚五个链接、用户协议 / 隐私政策弹窗 |
+| 未登录权限 | test_unauthorized.py | 六大入口拦截、加购 / 立即购买拦截、注册入口生命周期 |
 
 ## 运行结果
 

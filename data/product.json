@@ -1,12 +1,16 @@
 [
-  {"keyword": "手机数码", "expect_count": 5},
+  {"keyword": "手机数码", "expect_count": 4},
   {"keyword": "电脑办公", "expect_count": 4},
-  {"keyword": "影音娱乐", "expect_count": 3},
+  {"keyword": "影音娱乐", "expect_count": 4},
   {"keyword": "智能穿戴", "expect_count": 4},
-  {"keyword": "家用电器", "expect_count": 8},
-  {"keyword": "全部", "expect_count": 24},
+  {"keyword": "家用电器", "expect_count": 4},
+  {"keyword": "服饰鞋包", "expect_count": 4},
+  {"keyword": "食品生鲜", "expect_count": 4},
+  {"keyword": "美妆个护", "expect_count": 4},
+  {"keyword": "运动户外", "expect_count": 4},
+  {"keyword": "图书文娱", "expect_count": 4},
   {"keyword": "iPhone", "expect_count": 1},
-  {"keyword": "小米", "expect_count": 1},
-  {"keyword": "华为", "expect_count": 2},
+  {"keyword": "小米", "expect_count": 3},
+  {"keyword": "华为", "expect_count": 3},
   {"keyword": "不存在的商品XYZ", "expect_count": 0}
 ]
