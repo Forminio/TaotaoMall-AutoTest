@@ -254,6 +254,8 @@ def page_get_pager_info(self):
 
 ![](result/report2.png)
 
+![](result/report3.png)
+
 ## 附录：几个核心文件
 
 <details>
